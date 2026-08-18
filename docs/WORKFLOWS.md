@@ -1,6 +1,26 @@
 # Architecture Workflow Guide
 
-## 1. New project
+## 1. Existing project: establish architecture documentation
+
+```text
+Existing codebase
+  -> architecture-documentation (Bootstrap)
+  -> inspect executable module/dependency/runtime structure
+  -> read CONTEXT / ADR / existing design docs
+  -> establish the authoritative architecture document
+```
+
+Document what exists now. Do not redesign the codebase during documentation work.
+
+If an architecture document already exists but may be stale:
+
+```text
+Architecture docs + code
+  -> architecture-documentation (Reconcile)
+  -> classify DOC_STALE / CODE_DEVIATION / AMBIGUOUS / PLANNED_NOT_LANDED
+```
+
+## 2. New project
 
 ```text
 Initial requirements
@@ -15,7 +35,7 @@ Initial requirements
 
 Use `to-spec` only when the architecture needs durable handoff or multi-session execution.
 
-## 2. Ordinary feature
+## 3. Ordinary feature
 
 ```text
 Requirement
@@ -27,7 +47,7 @@ Requirement
 
 Escalate to `architecture-change` only when the feature changes ownership, module topology, public seams, dependency direction, or domain concepts.
 
-## 3. New module
+## 4. New module
 
 ```text
 Requirement
@@ -36,26 +56,41 @@ Requirement
   -> domain-modeling if vocabulary changes
   -> codebase-design
   -> native Plan Mode
-  -> update ARCHITECTURE.md if topology changes
   -> execute
   -> architecture-review
+  -> architecture-documentation (Update) if structural truth changed
 ```
 
-## 4. Architecture change
+Do not update current-state documentation merely because the module design was approved. Update it after the landed architecture is verified.
+
+## 5. Architecture change
 
 ```text
 Current architecture
-  -> architecture impact analysis
-  -> domain-modeling if semantics change
-  -> codebase-design for new seams
-  -> migration / compatibility plan
-  -> native Plan Mode
+  -> architecture-change
+      -> architecture impact analysis
+      -> domain-modeling if semantics change
+      -> codebase-design for new seams
+      -> migration / compatibility plan
+      -> native Plan Mode
   -> execute
   -> architecture-review
-  -> update ADR / ARCHITECTURE.md
+  -> architecture-documentation (Update)
 ```
 
-## 5. Periodic health check
+This separates target design from current-state documentation:
+
+```text
+Plan/spec/ADR
+  -> what we intend to change
+
+Architecture documentation
+  -> what has actually landed and been verified
+```
+
+If a migration is partially complete, document the real mixed state rather than the final target.
+
+## 6. Periodic health check
 
 ```text
 Recent changes / hotspots
@@ -64,7 +99,32 @@ Recent changes / hotspots
   -> architecture-change
   -> execute in small steps
   -> architecture-review
+  -> architecture-documentation if structure changed
 ```
+
+## Architecture documentation responsibilities
+
+Use `architecture-documentation` for three modes:
+
+```text
+Bootstrap
+  Build architecture documentation for an existing project.
+
+Update
+  Surgically update documentation after verified structural changes.
+
+Reconcile
+  Compare documentation with executable reality and classify drift.
+```
+
+Architecture docs should distinguish:
+
+- observed architecture;
+- architectural invariants;
+- known deviations;
+- architectural debt.
+
+Prefer surgical edits over regenerating an entire human-maintained document.
 
 ## Escalation triggers
 
@@ -81,5 +141,11 @@ Run architecture-specific design when any of these appears:
 - two or more modules repeatedly changing together;
 - tests must reach through multiple internals to verify behavior;
 - the proposed implementation bypasses an existing seam.
+
+Run `architecture-documentation` when:
+
+- an existing project lacks an authoritative architecture document;
+- architecture documentation may be stale;
+- a verified structural change has landed and current-state documentation needs updating.
 
 Otherwise, stay with native Plan Mode.
