@@ -1,0 +1,6 @@
+architecture-workflow
+new-project-architecture
+new-module-architecture
+architecture-change
+architecture-review
+architecture-health
