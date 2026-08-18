@@ -19,7 +19,7 @@ Review only the change and the architecture it touches. Do not turn every review
 Read:
 
 - the plan/spec if one exists;
-- `ARCHITECTURE.md`;
+- `ARCHITECTURE.md` or the repository's authoritative architecture docs;
 - relevant `CONTEXT.md`;
 - relevant ADRs;
 - the diff against a known-good point;
@@ -102,13 +102,20 @@ Find:
 - code that changes domain semantics without updating the model;
 - state ownership contradicting `CONTEXT.md` or a relevant ADR.
 
-### 8. Architecture memory
+### 8. Architecture memory impact
 
-If the change deliberately changes architecture, verify:
+Determine what persistent architecture memory must change as a consequence of the verified implementation.
 
-- `ARCHITECTURE.md` reflects the new current state;
-- ADRs are added/updated only when a real consequential decision exists;
-- obsolete architecture documentation is not left authoritative.
+Do not require current-state architecture documentation to be updated *before* this review merely because the plan proposed a new architecture. Instead:
+
+- verify the landed code actually establishes the intended new structural state;
+- identify which architecture-document sections/diagrams are now stale;
+- identify ADR updates only when a consequential decision changed;
+- identify domain glossary updates only when domain meaning changed.
+
+After a passing review, route current-state architecture documentation updates through `architecture-documentation` in Update mode.
+
+If architecture docs were already updated in the same change, verify that they describe the landed reality rather than the planned target.
 
 ## Severity
 
@@ -138,7 +145,7 @@ Smallest credible fix:
 Only list important architecture properties the change preserved.
 
 ## Architecture memory
-Required ARCHITECTURE.md / CONTEXT.md / ADR updates, if any.
+Required `architecture-documentation` update, CONTEXT.md change, or ADR update, if any.
 ```
 
 If there are no findings, say so. Do not manufacture architecture criticism.
