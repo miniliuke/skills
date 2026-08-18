@@ -1,6 +1,6 @@
 # Architecture Skills Bundle（中文说明）
 
-这是一套面向现代 Coding Agent 的**架构设计 + 开发 + Review + 长期治理** Skills 集合。
+这是一套面向现代 Coding Agent 的**架构设计 + 开发 + Review + 文档维护 + 长期治理** Skills 集合。
 
 仓库现在同时包含两部分：
 
@@ -49,6 +49,7 @@ npx skills add miniliuke/skills --skill '*' --agent claude-code
 
 ```text
 architecture-workflow
+architecture-documentation
 new-project-architecture
 new-module-architecture
 architecture-change
@@ -56,9 +57,62 @@ architecture-review
 architecture-health
 ```
 
-它们负责把 Agent 原生 Plan Mode 和架构约束结合起来，而不是重新制造一套冗长的 planning 流水线。
+其中：
+
+- `architecture-workflow`：根据任务类型选择最轻量的架构流程；
+- `architecture-documentation`：为已有项目建立、增量更新或校准架构文档；
+- `new-project-architecture`：新建项目/大型子系统；
+- `new-module-architecture`：新建模块、插件、子系统；
+- `architecture-change`：架构变化前做影响分析和迁移设计；
+- `architecture-review`：对实现结果做独立架构审查；
+- `architecture-health`：周期性全局架构治理。
 
 这些 Skill 名称记录在 `.github/custom-skills.txt`。如果未来 Matt 上游出现同名 Skill，CI 会直接失败，而不会静默覆盖你的自定义版本。
+
+## `architecture-documentation`
+
+这个 Skill 专门维护“**当前真实架构**”，不是架构优化器。
+
+它会根据项目状态自动选择三种模式：
+
+```text
+Bootstrap
+  已有项目没有权威架构文档
+  -> 逆向代码建立架构文档
+
+Update
+  已验证的结构性修改已经落地
+  -> 只更新变旧的章节/图
+
+Reconcile
+  怀疑架构文档与代码已经漂移
+  -> 对照代码和文档进行校准
+```
+
+最重要的规则：
+
+```text
+ARCHITECTURE.md 描述现在已经存在并验证过的架构。
+计划中的目标架构不能提前写成当前架构。
+```
+
+文档会尽量区分：
+
+```text
+Observed architecture
+  当前代码实际是什么
+
+Architectural invariants
+  项目希望长期保持的结构约束
+
+Known deviations
+  当前代码已经违反约束的地方
+
+Architectural debt
+  不一定违规，但值得后续优化的结构问题
+```
+
+已有文档优先做局部修改，不默认整篇重写，也不会为了让文档“看起来合理”而掩盖代码中的架构偏差。
 
 ## 自动同步的 Matt Skills
 
@@ -116,6 +170,32 @@ prototype
 
 默认不额外增加流程。
 
+### 已有项目首次建立架构文档
+
+```text
+Existing codebase
+ -> architecture-documentation (Bootstrap)
+     -> 扫描模块/依赖/公共 seam/runtime/data flow
+     -> 读取 CONTEXT / ADR / 已有设计文档
+     -> 如实记录当前架构
+     -> ARCHITECTURE.md（或项目已有权威架构文档）
+```
+
+如果只是梳理架构，不会顺手重构项目。
+
+### 已有架构文档需要校准
+
+```text
+Architecture docs + current code
+ -> architecture-documentation (Reconcile)
+     -> DOC_STALE
+     -> CODE_DEVIATION
+     -> AMBIGUOUS
+     -> PLANNED_NOT_LANDED
+```
+
+代码需要改造的问题交给 `architecture-change`，不会在文档同步过程中偷偷修改代码。
+
 ### 新建项目
 
 ```text
@@ -155,7 +235,10 @@ prototype
      -> Agent Plan Mode
  -> Execute
  -> architecture-review
+ -> architecture-documentation (Update)
 ```
+
+注意顺序：**先实现并通过架构审查，再更新“当前架构”文档**。不能因为方案已经批准，就提前把目标架构写进 `ARCHITECTURE.md`。
 
 ### 周期性架构优化
 
@@ -167,6 +250,7 @@ prototype
  -> architecture-change
  -> Execute
  -> architecture-review
+ -> architecture-documentation（如果真实结构发生变化）
 ```
 
 ## `to-spec` / `to-tickets`
@@ -207,24 +291,28 @@ prototype
 “为什么当时这样决定？”
 ```
 
-### `ARCHITECTURE.md`
+### `ARCHITECTURE.md`（或项目已有权威架构文档）
 
-记录当前有效结构合同：
+记录**当前已经验证的结构事实 + 有效结构约束**：
 
 ```text
-“现在模块如何划分，后续修改必须遵守什么？”
+“现在实际是怎样的？后续修改要保持哪些规则？”
 ```
+
+`architecture-documentation` 负责长期维护这一层。
 
 推荐记录：
 
 ```text
 模块职责
-允许依赖
-禁止依赖
+实际依赖
+允许/禁止依赖
 稳定 seam
 扩展点
 关键 runtime/data flow
 架构 invariant
+known deviations
+architecture debt
 ```
 
 尽量写成明确规则，例如：
