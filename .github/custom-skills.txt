@@ -4,3 +4,4 @@ new-module-architecture
 architecture-change
 architecture-review
 architecture-health
+architecture-documentation
