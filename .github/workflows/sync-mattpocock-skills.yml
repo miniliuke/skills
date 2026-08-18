@@ -20,6 +20,7 @@ concurrency:
 jobs:
   sync:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout bundle repository
         uses: actions/checkout@v4
@@ -56,7 +57,6 @@ jobs:
             protected["$name"]=1
           done < "$custom_manifest"
 
-          # Remove previously vendored skills that disappeared or moved upstream.
           while IFS= read -r entry; do
             [[ -z "$entry" || "$entry" == \#* ]] && continue
             name="${entry#*/}"
@@ -89,7 +89,6 @@ jobs:
                 exit 1
               fi
 
-              # Do not silently vendor symlinks from upstream.
               if find "$source" -type l -print -quit | grep -q .; then
                 echo "Refusing to sync symlink-containing skill: $group/$name" >&2
                 exit 1
@@ -101,16 +100,11 @@ jobs:
             done
           }
 
-          # Engineering is the main architecture/development bundle.
           sync_group engineering
-
-          # Productivity contains grilling/grill-me and companion workflow skills
-          # used by engineering skills such as grill-with-docs.
           sync_group productivity
 
           sort -u -o "$manifest" "$manifest"
 
-          # Keep upstream metadata and documentation for provenance/debugging.
           cp "$upstream/LICENSE" vendor/mattpocock/LICENSE
           git -C "$upstream" rev-parse HEAD > vendor/mattpocock/UPSTREAM_COMMIT
 
