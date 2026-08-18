@@ -1,0 +1,12 @@
+engineering/code-review
+engineering/codebase-design
+engineering/domain-modeling
+engineering/grill-with-docs
+engineering/implement
+engineering/improve-codebase-architecture
+engineering/setup-matt-pocock-skills
+engineering/tdd
+engineering/to-spec
+engineering/to-tickets
+productivity/grill-me
+productivity/grilling
