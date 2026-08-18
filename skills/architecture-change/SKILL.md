@@ -29,7 +29,7 @@ Actual architecture
 Proposed architecture
 ```
 
-Surface mismatches instead of silently treating one as authoritative.
+Surface mismatches instead of silently treating one as authoritative. If architecture documentation is materially stale and the current state cannot be established safely, use `architecture-documentation` in Reconcile mode before designing the change.
 
 ## 2. State the pressure causing the change
 
@@ -107,7 +107,8 @@ Only if execution shape changes.
 Order of changes, compatibility bridge, cleanup point.
 
 ### Architecture memory
-ARCHITECTURE.md updates and ADRs.
+Expected documentation/ADR impact after the change lands.
+Do not update current-state architecture documentation yet merely because this plan is approved.
 
 ### Risks
 Failure modes and rollback/verification strategy.
@@ -150,8 +151,20 @@ Create tickets when they provide real parallel or resumable execution boundaries
 The architecture change is complete only when:
 
 - obsolete paths are removed or have an explicit retirement issue;
-- `ARCHITECTURE.md` describes the new current state;
-- consequential decisions are recorded in ADRs;
+- consequential decisions are recorded in ADRs when warranted;
 - tests target stable behavior through the intended seam;
 - no upper layer bypasses the new seam;
-- the dependency graph matches the intended direction.
+- the dependency graph matches the intended direction;
+- `architecture-review` has verified the landed structural state;
+- when structural truth changed, `architecture-documentation` has updated the authoritative architecture document to describe the verified new current state.
+
+The intended order is:
+
+```text
+architecture-change
+  -> implement
+  -> architecture-review
+  -> architecture-documentation (Update)
+```
+
+Never promote proposed architecture into current-state documentation before implementation and review establish it as reality.
