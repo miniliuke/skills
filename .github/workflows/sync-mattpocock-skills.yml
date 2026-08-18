@@ -1,0 +1,193 @@
+name: Sync Matt Pocock Skills
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "23 2 * * *"
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/sync-mattpocock-skills.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-mattpocock-skills
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout bundle repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch upstream
+        run: |
+          set -euo pipefail
+          git clone --depth=1 https://github.com/mattpocock/skills.git /tmp/mattpocock-skills
+
+      - name: Mirror stable upstream skills
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          upstream=/tmp/mattpocock-skills
+          manifest=vendor/mattpocock/MANIFEST.txt
+          old_manifest=/tmp/old-mattpocock-manifest.txt
+          custom_manifest=.github/custom-skills.txt
+
+          mkdir -p skills vendor/mattpocock
+          touch "$custom_manifest"
+
+          if [[ -f "$manifest" ]]; then
+            cp "$manifest" "$old_manifest"
+          else
+            : > "$old_manifest"
+          fi
+
+          declare -A protected=()
+          while IFS= read -r name; do
+            [[ -z "$name" || "$name" == \#* ]] && continue
+            protected["$name"]=1
+          done < "$custom_manifest"
+
+          # Remove previously vendored skills that disappeared or moved upstream.
+          while IFS= read -r entry; do
+            [[ -z "$entry" || "$entry" == \#* ]] && continue
+            name="${entry#*/}"
+            if [[ -n "${protected[$name]:-}" ]]; then
+              echo "Refusing to remove protected custom skill: $name" >&2
+              exit 1
+            fi
+            rm -rf "skills/$name"
+          done < "$old_manifest"
+
+          : > "$manifest"
+
+          sync_group() {
+            local group="$1"
+            local group_dir="$upstream/skills/$group"
+
+            [[ -d "$group_dir" ]] || {
+              echo "Missing upstream group: $group_dir" >&2
+              exit 1
+            }
+
+            for source in "$group_dir"/*; do
+              [[ -d "$source" && -f "$source/SKILL.md" ]] || continue
+
+              local name
+              name="$(basename "$source")"
+
+              if [[ -n "${protected[$name]:-}" ]]; then
+                echo "Upstream skill '$group/$name' collides with protected custom skill '$name'." >&2
+                exit 1
+              fi
+
+              # Do not silently vendor symlinks from upstream.
+              if find "$source" -type l -print -quit | grep -q .; then
+                echo "Refusing to sync symlink-containing skill: $group/$name" >&2
+                exit 1
+              fi
+
+              rm -rf "skills/$name"
+              cp -a "$source" "skills/$name"
+              printf '%s/%s\n' "$group" "$name" >> "$manifest"
+            done
+          }
+
+          # Engineering is the main architecture/development bundle.
+          sync_group engineering
+
+          # Productivity contains grilling/grill-me and companion workflow skills
+          # used by engineering skills such as grill-with-docs.
+          sync_group productivity
+
+          sort -u -o "$manifest" "$manifest"
+
+          # Keep upstream metadata and documentation for provenance/debugging.
+          cp "$upstream/LICENSE" vendor/mattpocock/LICENSE
+          git -C "$upstream" rev-parse HEAD > vendor/mattpocock/UPSTREAM_COMMIT
+
+          rm -rf vendor/mattpocock/docs-engineering
+          if [[ -d "$upstream/docs/engineering" ]]; then
+            cp -a "$upstream/docs/engineering" vendor/mattpocock/docs-engineering
+          fi
+
+          cp "$upstream/skills/engineering/README.md" vendor/mattpocock/ENGINEERING.md
+          cp "$upstream/skills/productivity/README.md" vendor/mattpocock/PRODUCTIVITY.md
+
+          echo "Synced upstream commit: $(cat vendor/mattpocock/UPSTREAM_COMMIT)"
+          echo "Vendored skills:"
+          cat "$manifest"
+
+      - name: Validate vendored skills
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          import sys
+
+          manifest = Path('vendor/mattpocock/MANIFEST.txt')
+          errors = []
+
+          for entry in manifest.read_text(encoding='utf-8').splitlines():
+              if not entry.strip():
+                  continue
+              _, name = entry.split('/', 1)
+              path = Path('skills') / name / 'SKILL.md'
+              if not path.exists():
+                  errors.append(f'missing {path}')
+                  continue
+
+              text = path.read_text(encoding='utf-8')
+              if not text.startswith('---\n'):
+                  errors.append(f'{path}: missing YAML frontmatter')
+                  continue
+
+              end = text.find('\n---\n', 4)
+              if end == -1:
+                  errors.append(f'{path}: unterminated YAML frontmatter')
+                  continue
+
+              frontmatter = text[4:end]
+              match = re.search(r'^name:\s*["\']?([^"\'\n]+)["\']?\s*$', frontmatter, re.M)
+              if not match:
+                  errors.append(f'{path}: missing name in frontmatter')
+                  continue
+
+              declared = match.group(1).strip()
+              if declared != name:
+                  errors.append(f'{path}: frontmatter name={declared!r}, directory={name!r}')
+
+          if errors:
+              print('\n'.join(errors), file=sys.stderr)
+              raise SystemExit(1)
+          PY
+
+          git diff --check
+
+      - name: Commit synchronized files
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if git diff --quiet -- skills vendor/mattpocock; then
+            echo "Already up to date."
+            exit 0
+          fi
+
+          sha="$(cat vendor/mattpocock/UPSTREAM_COMMIT)"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add skills vendor/mattpocock
+          git commit -m "chore: sync mattpocock skills @ ${sha:0:12}"
+          git push
