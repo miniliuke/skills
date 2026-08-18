@@ -1,6 +1,6 @@
 ---
 name: architecture-workflow
-description: "Route software development work to the lightest architecture workflow. Use when planning a new project, new module, cross-module feature, architecture refactor, or when deciding whether domain modeling, codebase design, specs, tickets, or architecture review are actually necessary."
+description: "Route software development work to the lightest architecture workflow. Use when planning a new project, documenting an existing project, adding a new module, making a cross-module feature, architecture refactor, or when deciding whether domain modeling, codebase design, specs, tickets, documentation, or architecture review are actually necessary."
 ---
 
 # Architecture Workflow
@@ -43,7 +43,21 @@ Otherwise:
 5. Create a compact `ARCHITECTURE.md` only after the structural decisions are coherent.
 6. Create ADRs only for hard-to-reverse, non-obvious trade-offs.
 
-### C. New module / plugin / subsystem in an existing project
+### C. Existing project architecture documentation
+
+Use `architecture-documentation` when the user wants to understand/document an existing codebase, update an architecture document after verified structural changes, or reconcile architecture docs with current code.
+
+It has three modes:
+
+```text
+Bootstrap  -> no authoritative architecture document exists
+Update     -> verified architecture changes have landed
+Reconcile  -> documentation may have drifted from executable reality
+```
+
+Do not use documentation work to redesign the codebase. `ARCHITECTURE.md` describes the verified current architecture; planned architecture stays in plans/specs/ADRs until it lands.
+
+### D. New module / plugin / subsystem in an existing project
 
 Use `new-module-architecture` if available.
 
@@ -56,7 +70,7 @@ The module must earn its existence. Check:
 - Can tests target its public interface?
 - Does it preserve dependency direction?
 
-### D. Architecture-changing feature or refactor
+### E. Architecture-changing feature or refactor
 
 Use `architecture-change` if available.
 
@@ -72,11 +86,13 @@ Escalate here when any of these changes:
 
 Require an Architecture Impact block in the plan.
 
-### E. Review
+After implementation passes `architecture-review`, use `architecture-documentation` to update current-state architecture documentation when the structural truth changed.
+
+### F. Review
 
 Use `architecture-review` when a plan, diff, branch, or PR exists and architectural conformance needs checking.
 
-### F. Periodic architecture maintenance
+### G. Periodic architecture maintenance
 
 Use `architecture-health` when the user asks to improve structure globally, or when repeated development friction suggests the architecture itself is becoming the bottleneck.
 
@@ -158,9 +174,9 @@ Use them differently:
 
 - `CONTEXT.md`: vocabulary, no implementation diary.
 - ADRs: consequential decisions and rationale.
-- `ARCHITECTURE.md`: current structural contract.
+- `ARCHITECTURE.md`: verified current structural truth plus active structural constraints.
 
-If documentation conflicts with executable reality, surface the conflict. Do not silently choose whichever source supports the proposed plan.
+If documentation conflicts with executable reality, surface the conflict. Use `architecture-documentation` to classify it as stale documentation, code deviation, ambiguity, or planned-but-not-landed architecture rather than silently choosing whichever source supports the proposed plan.
 
 ## Do not create a spec or tickets by default
 
@@ -178,3 +194,4 @@ Use tickets only when they create useful execution boundaries: parallel ownershi
 - Do not force DDD, Clean Architecture, hexagonal architecture, or microservices onto a codebase that does not need them.
 - Preserve useful existing conventions unless there is concrete evidence that changing them pays for the migration cost.
 - Distinguish structural debt from style preferences.
+- Do not write planned architecture into current-state documentation before implementation and review establish it as reality.
