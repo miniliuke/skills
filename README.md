@@ -1,6 +1,6 @@
 # Architecture Skills Bundle
 
-A self-contained set of agent skills for **designing, implementing, reviewing, and maintaining software architecture with modern coding agents**.
+A self-contained set of agent skills for **designing, implementing, reviewing, documenting, and maintaining software architecture with modern coding agents**.
 
 The repository combines:
 
@@ -9,7 +9,7 @@ The repository combines:
 
 The core idea is deliberately lightweight:
 
-> Use the agent's native Plan Mode for ordinary planning. Add specialized skills only when domain, module, interface, review, or long-lived architecture reasoning is needed.
+> Use the agent's native Plan Mode for ordinary planning. Add specialized skills only when domain, module, interface, documentation, review, or long-lived architecture reasoning is needed.
 
 ## Install
 
@@ -44,6 +44,7 @@ No separate `mattpocock/skills` installation is required when using the full bun
 | Skill | When to use | Main outcome |
 |---|---|---|
 | `architecture-workflow` | Unsure which architecture workflow a task needs | Routes to the lightest appropriate workflow |
+| `architecture-documentation` | Documenting an existing project, updating architecture docs, or reconciling docs with code | Accurate current-state architecture documentation without silently redesigning the codebase |
 | `new-project-architecture` | Starting a new codebase or major subsystem | Domain model, module map, dependency rules, architecture contract |
 | `new-module-architecture` | Adding a module / plugin / subsystem | Justified module seam, interface, dependencies, integration plan |
 | `architecture-change` | Changing boundaries, ownership, public interfaces, dependencies, or runtime flow | Architecture impact analysis and migration-safe plan |
@@ -101,6 +102,18 @@ Requirement
 
 Do not invoke extra process just to make a simple change look rigorous.
 
+### Existing project: establish or maintain architecture documentation
+
+```text
+Existing codebase
+  -> architecture-documentation
+      -> Bootstrap   (no authoritative architecture doc)
+      -> Update      (verified structural change landed)
+      -> Reconcile   (docs may have drifted from code)
+```
+
+`architecture-documentation` records the architecture that **exists now**. It separates observed architecture, intended invariants, known deviations, and structural debt. Planned/target architecture must stay in a plan/spec/ADR until implementation and architecture review establish it as current reality.
+
 ### New project
 
 ```text
@@ -140,7 +153,10 @@ Requirement
       -> Native Plan Mode
   -> Execute
   -> architecture-review
+  -> architecture-documentation (Update)
 ```
+
+The documentation update happens after the landed structure is verified, not when the target design is merely planned.
 
 ### Periodic health check
 
@@ -152,6 +168,7 @@ Several features / one milestone
   -> architecture-change
   -> Execute
   -> architecture-review
+  -> architecture-documentation (if structural truth changed)
 ```
 
 ## `to-spec` and `to-tickets`
@@ -180,12 +197,14 @@ docs/adr/
   Consequential decisions.
   "Why did we deliberately choose this?"
 
-ARCHITECTURE.md
-  Current structural contract.
-  "How is the system divided and what rules must changes preserve?"
+ARCHITECTURE.md (or the repo's authoritative architecture doc)
+  Verified current structural truth + active constraints.
+  "How is the system actually divided now, and what rules should future changes preserve?"
 ```
 
-Keep `ARCHITECTURE.md` compact and explicit. Prefer rules such as:
+`architecture-documentation` maintains the third category and should prefer surgical updates over full rewrites.
+
+Keep architecture documentation compact and explicit. Prefer rules such as:
 
 ```text
 Allowed: application -> dataset-api
