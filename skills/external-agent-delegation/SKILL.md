@@ -33,18 +33,48 @@ Do not delegate tiny work, work whose explanation costs as much as execution, wo
 
 ## Use the wrapper, not raw CLI calls
 
-For ordinary delegation invoke [`scripts/external_agent.py`](scripts/external_agent.py). It owns CLI capability discovery/caching, tool-level `workdir`, structured-output normalization, outer/inner JSON parsing, actual model/service-tier/cost extraction, Windows encoding warnings, and permission-block detection.
+For ordinary delegation invoke [`scripts/external_agent.py`](scripts/external_agent.py). Resolve the wrapper **relative to this skill's actual `SKILL.md` path**, never relative to the task repository's current working directory.
+
+Let `SKILL_DIR` mean the absolute directory containing this `SKILL.md`. Then invoke:
 
 ```text
-python scripts/external_agent.py claude --task "<bounded task>" --workdir .
-python scripts/external_agent.py agy --task "<repository task>" --workdir .
+python "$SKILL_DIR/scripts/external_agent.py" claude --task "<bounded task>" --workdir <repo> --require-field status
+python "$SKILL_DIR/scripts/external_agent.py" agy --task "<repository task>" --workdir <repo> --require-field summary --require-field findings
 ```
+
+Use the concrete absolute/resolved skill path supplied by skill discovery when constructing the real command. Do not emit `python scripts/external_agent.py ...` unless the process cwd is itself the skill directory.
 
 For long prompts prefer `--task-file`. `--health` and `--dry-run` are local-only and must not call a model.
 
+The wrapper owns CLI capability discovery/caching, tool-level `workdir`, structured-output normalization, outer/inner JSON parsing, result-contract validation, actual model/service-tier/cost extraction, Windows encoding warnings, and permission-block detection.
+
 Do not bypass the wrapper unless debugging or adapting the wrapper itself.
 
-The wrapper does **not** decide whether to delegate, how to split the task, whether findings are trustworthy, or whether code should change. Those remain Codex responsibilities.
+## Declare the result contract
+
+`ok: true` means **semantic success**, not merely exit code 0.
+
+For normal JSON delegation, the wrapper defaults to expecting a JSON object. Declare fields that Codex will rely on:
+
+```text
+--require-field status
+--require-field findings
+```
+
+When a specific value is part of success, declare it too:
+
+```text
+--require-value status=ok
+--require-value success=true
+```
+
+Use dotted paths for nested object fields. If the CLI exits 0 but the result is plain text, has the wrong JSON shape, misses required fields, or violates required values, the wrapper returns `ok: false` with a result-contract error. A non-JSON string where JSON was expected adds `RESULT_SCHEMA_UNEXPECTED`.
+
+## Runtime accounting
+
+Treat CLI brand and runtime model identity separately. The wrapper records runtime metadata when exposed.
+
+For Claude, missing model/cost metadata must be explicit: `runtime.metadata_status` and `runtime.missing` identify what was not reported, and warnings include `RUNTIME_MODEL_METADATA_MISSING` and/or `RUNTIME_COST_METADATA_MISSING`. Never infer missing model or cost values.
 
 ## Load only role-specific guidance
 
