@@ -1,6 +1,8 @@
 # Claude role
 
-Treat Claude as a cheap, high-throughput bounded executor. In this environment it may be backed by a weaker model, so optimize tasks for objective verification rather than judgment.
+Treat Claude as a cheap, high-throughput bounded executor. The CLI brand does **not** identify the actual backing model. In this environment the service may route to another model, so optimize tasks for objective verification rather than judgment and record the runtime identity reported by the response.
+
+Before invoking Claude, follow [`cli-runtime.md`](cli-runtime.md) and validate uncertain local flags with `claude --help`.
 
 ## Good work for Claude
 
@@ -39,6 +41,28 @@ Extract operations slower than 2s, group by operation name,
 and report count / p50 / p95 / max plus the five slowest examples.
 Do not infer causes unless directly supported by the log.
 ```
+
+## Parse and record runtime metadata
+
+When structured CLI output is used, do not assume the top-level object is the task result. Parse the outer envelope first, then parse the semantic `result` payload according to [`cli-runtime.md`](cli-runtime.md).
+
+When available, capture:
+
+```text
+cli: claude
+actual_model: <reported model, e.g. modelUsage key>
+service_tier: <reported tier if present>
+cost_usd: <reported cost if present>
+usage: <tokens/usage metadata if present>
+```
+
+A value such as `modelUsage.deepseek-v4-flash` means the actual runtime model is DeepSeek V4 Flash; do not report it simply as "Claude".
+
+Cost is part of delegation quality. Even a simple model-backed check may have meaningful cost, so prefer local `--help`/version diagnostics for CLI health and skip delegation when the task is cheaper to do directly.
+
+## Windows paths
+
+If Claude returns non-ASCII filenames or paths, watch for mojibake such as `锟斤拷`. Do not act on a suspicious rendered path without reconciling it against the actual filesystem. Prefer structured UTF-8 path fields when possible.
 
 ## Do not use Claude for
 
