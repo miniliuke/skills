@@ -1,0 +1,5 @@
+interface:
+  display_name: "Architecture Documentation"
+  short_description: "Bootstrap, update, or reconcile architecture docs"
+policy:
+  allow_implicit_invocation: false

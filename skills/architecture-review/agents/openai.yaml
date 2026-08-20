@@ -1,0 +1,5 @@
+interface:
+  display_name: "Architecture Review"
+  short_description: "Review architectural conformance and impact"
+policy:
+  allow_implicit_invocation: false
