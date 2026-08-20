@@ -2,6 +2,11 @@ name: Sync Matt Pocock Skills
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/sync-mattpocock-skills.yml"
   schedule:
     - cron: "23 2 * * *"
 
@@ -27,7 +32,7 @@ jobs:
           set -euo pipefail
           git clone --depth=1 https://github.com/mattpocock/skills.git /tmp/mattpocock-skills
 
-      - name: Mirror stable upstream skills
+      - name: Mirror selected upstream skills
         shell: bash
         run: |
           set -euo pipefail
@@ -65,40 +70,53 @@ jobs:
 
           : > "$manifest"
 
-          sync_group() {
-            local group="$1"
-            local group_dir="$upstream/skills/$group"
+          sync_skill() {
+            local entry="$1"
+            local group="${entry%%/*}"
+            local name="${entry#*/}"
+            local source="$upstream/skills/$entry"
 
-            [[ -d "$group_dir" ]] || {
-              echo "Missing upstream group: $group_dir" >&2
+            [[ "$name" != "$entry" ]] || {
+              echo "Invalid skill entry: $entry" >&2
               exit 1
             }
 
-            for source in "$group_dir"/*; do
-              [[ -d "$source" && -f "$source/SKILL.md" ]] || continue
+            [[ -d "$source" && -f "$source/SKILL.md" ]] || {
+              echo "Missing upstream skill: $entry" >&2
+              exit 1
+            }
 
-              local name
-              name="$(basename "$source")"
+            if [[ -n "${protected[$name]:-}" ]]; then
+              echo "Upstream skill '$entry' collides with protected custom skill '$name'." >&2
+              exit 1
+            fi
 
-              if [[ -n "${protected[$name]:-}" ]]; then
-                echo "Upstream skill '$group/$name' collides with protected custom skill '$name'." >&2
-                exit 1
-              fi
+            # Never silently vendor symlinks from upstream.
+            if find "$source" -type l -print -quit | grep -q .; then
+              echo "Refusing to sync symlink-containing skill: $entry" >&2
+              exit 1
+            fi
 
-              # Never silently vendor symlinks from upstream.
-              if find "$source" -type l -print -quit | grep -q .; then
-                echo "Refusing to sync symlink-containing skill: $group/$name" >&2
-                exit 1
-              fi
-
-              rm -rf "skills/$name"
-              cp -a "$source" "skills/$name"
-              printf '%s/%s\n' "$group" "$name" >> "$manifest"
-            done
+            rm -rf "skills/$name"
+            cp -a "$source" "skills/$name"
+            printf '%s\n' "$entry" >> "$manifest"
           }
 
-          sync_group engineering
-          sync_group productivity
+          selected_skills=(
+            "engineering/codebase-design"
+            "engineering/domain-modeling"
+            "engineering/improve-codebase-architecture"
+            "engineering/diagnosing-bugs"
+            "engineering/grill-with-docs"
+            "engineering/tdd"
+            "productivity/grill-me"
+            "productivity/grilling"
+            "productivity/writing-for-agents"
+          )
+
+          for entry in "${selected_skills[@]}"; do
+            sync_skill "$entry"
+          done
 
           sort -u -o "$manifest" "$manifest"
 
@@ -180,5 +198,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add skills vendor/mattpocock
-          git commit -m "chore: sync mattpocock skills @ ${sha:0:12}"
+          git commit -m "chore: sync selected mattpocock skills @ ${sha:0:12}"
           git push
