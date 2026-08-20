@@ -5,287 +5,75 @@ description: "Delegate bounded software-development work from Codex to external 
 
 # External Agent Delegation
 
-Codex is the **primary agent**. External agents are helpers, not peers and not an orchestration layer.
+Codex is the primary agent. External agents are bounded helpers, not peers and not an orchestration layer.
 
-The goal is to move work to the cheapest capable agent **without moving ownership away from Codex**.
+The goal is **cost-adjusted capability**: move context-heavy or repetitive work to the cheapest capable agent while Codex keeps the difficult decisions, source-code ownership, integration, and final verification.
 
-```text
-User
-  -> Codex: understand / plan / decide
-       -> Claude: cheap bounded execution / bulk text work
-       -> AGY: repository reading / review / documentation
-  -> Codex: synthesize / implement / verify / finish
-```
-
-## Roles
-
-### Codex — owner, architect, developer
-
-Keep these in Codex:
-
-- solution design and architecture;
-- domain modeling and important trade-offs;
-- implementation plans;
-- ordinary feature development and bug fixes;
-- cross-module decisions;
-- API / data-model / persistence design;
-- non-trivial debugging that requires hypothesis generation;
-- choosing which external findings to trust;
-- final code changes, integration, verification, and user-facing answer.
-
-Do **not** delegate important reasoning merely to increase agent usage.
-
-### Claude — cheap, bounded executor
-
-In this environment Claude may be backed by a cheaper/weaker model. Treat it as a high-throughput worker, not a design authority.
-
-Prefer Claude for tasks that are **simple, token-heavy, repetitive, and objectively verifiable**:
-
-- run tests, builds, linters, formatters, benchmarks, or existing repro commands;
-- execute a known command matrix and summarize failures;
-- read large logs and extract errors, timings, counts, repeated patterns, or suspicious windows;
-- cluster or deduplicate repetitive diagnostics;
-- compare two large textual outputs when the comparison rule is clear;
-- perform mechanical checks against an explicit checklist;
-- summarize verbose tool/test output into a compact result.
-
-A Claude task MUST have:
-
-1. bounded input or scope;
-2. a concrete operation to perform;
-3. an objective completion signal;
-4. explicit output requirements.
-
-Good delegation:
-
-```text
-Run `mvn -pl connector-mysql test`.
-Do not edit files.
-Return failing test names, the first causal error for each failure,
-and the relevant log excerpt locations. Do not propose architecture changes.
-```
-
-```text
-Inspect logs/run-2026-08-20.jsonl.
-Extract operations slower than 2s, group by operation name,
-and report count / p50 / p95 / max plus the five slowest examples.
-Do not infer causes unless directly supported by the log.
-```
-
-Do NOT use Claude for:
-
-- architecture or solution design;
-- open-ended implementation decisions;
-- domain modeling;
-- subtle code review;
-- deciding a root cause from weak evidence;
-- modifying production/business code;
-- tasks whose correctness cannot be cheaply checked by Codex.
-
-If Claude returns an interpretation rather than evidence, treat it as untrusted input and verify it.
-
-### AGY — repository investigator, reviewer, document writer
-
-Use Antigravity for work that benefits from reading a lot of repository context but does not need Codex to surrender the main task:
-
-- codebase search and repository exploration;
-- tracing callers, implementations, dependencies, data flow, and configuration paths;
-- locating the implementation surface for a requested change;
-- implementation/code review;
-- reviewing diffs for correctness, regressions, missing tests, and convention violations;
-- checking consistency between implementation and existing docs;
-- drafting or updating technical documentation from repository facts;
-- producing inventories/maps of modules, APIs, configs, or extension points.
-
-AGY is normally **read-only**. It should return findings to Codex.
-
-For documentation tasks, AGY may edit documentation files when all of the following are true:
-
-- the user requested documentation work;
-- Codex has already defined the intended scope;
-- edits are limited to documentation paths;
-- AGY is not making architecture decisions on Codex's behalf.
-
-Do NOT use AGY for:
-
-- architecture ownership;
-- product/solution trade-offs;
-- ordinary feature implementation;
-- broad autonomous refactors;
-- final acceptance of its own review findings.
-
-Codex decides whether AGY findings are valid and applies business-code fixes itself.
-
-## Routing table
+## Routing
 
 | Work | Default owner |
 | --- | --- |
 | Architecture / solution / trade-offs | Codex |
-| Domain modeling | Codex |
-| Plan / spec decisions | Codex |
-| Ordinary implementation | Codex |
+| Domain modeling / plan decisions | Codex |
+| Ordinary implementation / bug fixes | Codex |
 | Complex root-cause reasoning | Codex |
-| Run tests / builds / lint / benchmarks | Claude |
-| Large log parsing / extraction | Claude |
-| Repetitive deterministic analysis | Claude |
-| Large output summarization | Claude |
+| Tests / builds / lint / benchmarks | Claude |
+| Large logs / repetitive deterministic analysis | Claude |
 | Repository search / code navigation | AGY |
 | Call-chain / dependency investigation | AGY |
 | Code / diff review | AGY |
 | Technical documentation drafting | AGY |
 | Final synthesis / edits / verification | Codex |
 
-When a task contains several kinds of work, split only the **bounded subtask** that fits an external role. Keep the parent task in Codex.
-
-## Prefer external agents over native Codex subagents
-
-When a bounded task clearly fits Claude or AGY, use that external agent instead of spawning a native Codex subagent.
-
-Native Codex subagents are fallback capacity, not the default delegation mechanism. Use them only when:
-
-- the external CLI needed for the role is unavailable or fails;
-- the subtask genuinely needs Codex-level reasoning in parallel;
-- the user explicitly requests native Codex agents;
-- neither external role safely fits the task.
-
-Do not spawn a native Codex agent for test execution, bulk log reading, repository search, routine review, or documentation merely because `spawn_agent` is convenient.
+Split only the bounded subtask that fits an external role. Keep the parent task in Codex.
 
 ## Delegation threshold
 
-Delegate when at least one of these is true:
+Delegate when at least one is true:
 
-- the subtask will consume substantial context/tokens but requires little judgment;
-- the subtask can run independently while Codex continues useful work;
-- another model reading the repository independently adds review value;
-- the task has a clean input/output boundary and cheap verification.
+- the subtask consumes substantial context/tokens but requires little judgment;
+- it has a clean input/output boundary and an objective completion signal;
+- it can run independently while Codex continues useful work;
+- an independent repository read or review adds confidence.
 
 Do not delegate when:
 
 - explaining the task costs about as much as doing it;
-- the relevant context exists only in Codex's current reasoning and would need to be reconstructed;
-- the action is tiny (one grep, one short test, one small file);
-- delegation would put an external agent on the critical path without saving context or improving confidence.
+- important context exists only in Codex's current reasoning;
+- the action is tiny;
+- correctness cannot be cheaply checked;
+- delegation would move architecture or product decisions away from Codex.
 
-## Invocation patterns
+## Prefer external agents over native subagents
 
-Use the repository root as the working directory unless the task is intentionally narrower.
+When a bounded task clearly fits Claude or AGY, prefer that external agent over a native Codex subagent. Native subagents are fallback capacity when the external CLI is unavailable, the task genuinely needs Codex-level parallel reasoning, the user explicitly requests native agents, or neither external role safely fits.
 
-### Claude / cheap executor
+## Load role instructions only when needed
 
-Typical headless call:
+Use progressive disclosure. Do not read every reference merely because this skill triggered.
 
-```powershell
-claude -p "<bounded task; include commands, constraints, and required output>" --output-format json
-```
+- Before delegating to **Claude**, read [`references/claude.md`](references/claude.md).
+- Before delegating to **AGY**, read [`references/agy.md`](references/agy.md).
+- Read [`references/invocation.md`](references/invocation.md) only when you need CLI invocation/output-contract details.
+- Read [`references/verification.md`](references/verification.md) when external findings will affect code/docs, when agents may run in parallel, or when an external call fails or returns uncertain evidence.
 
-Prompts should explicitly state whether edits are forbidden. For test/log chores, default to **no file edits**.
+If routing is obvious but delegation is not worthwhile, stop here and continue in Codex; do not load role references.
 
-Do not ask Claude to "investigate and fix". Split it:
+## Universal guardrails
 
-```text
-Claude: run/extract/measure -> evidence
-Codex: reason -> decide -> fix
-```
-
-### AGY / repository reader-reviewer
-
-For read-only investigation or review, prefer plan mode:
-
-```powershell
-agy -p "<repository investigation/review task; do not edit files>" --cwd "$PWD" --mode=plan --output-format json
-```
-
-For an explicitly delegated documentation edit, keep scope narrow and allow edits only for that job:
-
-```powershell
-agy -p "Update <specific docs> from verified repository facts. Do not edit source code." --cwd "$PWD" --mode=accept-edits --output-format json
-```
-
-Do not rely on prose in the prompt as a security boundary. Use the CLI's configured permissions/sandbox as the actual enforcement mechanism when available.
-
-## Output contracts
-
-External-agent output is evidence/input to Codex, not an authoritative final answer.
-
-Ask Claude to return compact execution evidence:
-
-```text
-status
-commands_run
-failures_or_findings
-measurements
-relevant_paths_or_log_locations
-unresolved_items
-```
-
-Ask AGY to return repository-grounded findings:
-
-```text
-summary
-files_examined
-findings (with file/symbol references)
-risks
-missing_tests_or_docs
-recommended_followups
-```
-
-Prefer paths, symbols, command names, failing tests, and concrete evidence over long prose.
-
-## Verification rules
-
-Codex must verify external results proportionally to risk.
-
-- Test/build result: verify exit status or rerun the decisive narrow command when needed.
-- Log extraction: spot-check representative source lines or records.
-- Repository search: open the important files/symbols before making a design decision.
-- Review finding: reproduce or inspect the cited code before changing it.
-- Documentation: ensure statements describe verified repository reality; planned architecture must not be presented as current architecture.
-
-Never let an external agent's confidence score substitute for verification.
-
-## Parallelism
-
-External agents are most useful when they remove context-heavy chores from Codex.
-
-Safe examples:
-
-```text
-Codex designs/implements
-  || Claude runs a previously defined test matrix
-```
-
-```text
-Codex reasons about a change
-  || AGY maps callers/dependencies
-```
-
-Avoid having Codex, Claude, and AGY edit the same working tree concurrently.
-
-Default write ownership:
-
-```text
-business/source code -> Codex
-technical docs       -> Codex or explicitly delegated AGY
-execution artifacts  -> tools/tests as required
-```
-
-## Failure handling
-
-If an external call fails:
-
-1. Retry once only when the failure is transient or the prompt/command is trivially correctable.
-2. Otherwise continue in Codex or use the other appropriate mechanism.
-3. Do not create an orchestration loop that repeatedly asks agents to fix each other.
-4. Report external-agent unavailability only if it materially affected the result.
+- External output is evidence/input, never authoritative final reasoning.
+- Codex owns business/source-code edits and final acceptance.
+- AGY is read-only by default; documentation edits are allowed only when documentation work was explicitly requested and scope is already defined.
+- Claude is a bounded executor, not a design authority.
+- Do not ask an external agent to both investigate and autonomously fix an open-ended problem.
+- Avoid concurrent edits to the same working tree.
+- Verify external findings proportionally to risk before acting on them.
+- Do not create agent-to-agent repair loops.
 
 ## Core principle
 
-Optimize for **cost-adjusted capability**:
-
 ```text
 Codex  = think, design, implement, integrate
-AGY    = read broadly, review independently, write docs
+AGY    = read broadly, review independently, write scoped docs
 Claude = execute cheaply, consume bulk text, return measurable evidence
 ```
-
-Delegation is successful when Codex keeps the difficult decisions while spending less context and compute on work that does not require them.
