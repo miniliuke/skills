@@ -42,11 +42,27 @@ Do not delegate when:
 - important context exists only in Codex's current reasoning;
 - the action is tiny;
 - correctness cannot be cheaply checked;
-- delegation would move architecture or product decisions away from Codex.
+- delegation would move architecture or product decisions away from Codex;
+- a paid health check or delegation overhead would cost more than doing the tiny task directly.
 
 ## Prefer external agents over native subagents
 
 When a bounded task clearly fits Claude or AGY, prefer that external agent over a native Codex subagent. Native subagents are fallback capacity when the external CLI is unavailable, the task genuinely needs Codex-level parallel reasoning, the user explicitly requests native agents, or neither external role safely fits.
+
+## Runtime rules before invoking a CLI
+
+External CLI syntax and output are environment-dependent. Never assume that a flag or output schema from documentation, another host, or a previous run is supported locally.
+
+Before the first real external-agent invocation in an environment, read [`references/cli-runtime.md`](references/cli-runtime.md). Its rules are mandatory for:
+
+- validating CLI flags with local `--help` before relying on them;
+- preferring the execution tool's working directory over speculative CLI `--cwd` flags;
+- parsing structured-output envelopes before parsing the semantic `result` payload;
+- recording the actual runtime model, service tier, usage, and cost when exposed;
+- avoiding unnecessary paid health checks;
+- handling Windows/non-ASCII path encoding safely.
+
+Do not escalate permissions merely because a normal invocation fails. Dangerous permission-bypass flags require explicit user authorization and must never be an automatic fallback.
 
 ## Load role instructions only when needed
 
@@ -54,7 +70,7 @@ Use progressive disclosure. Do not read every reference merely because this skil
 
 - Before delegating to **Claude**, read [`references/claude.md`](references/claude.md).
 - Before delegating to **AGY**, read [`references/agy.md`](references/agy.md).
-- Read [`references/invocation.md`](references/invocation.md) only when you need CLI invocation/output-contract details.
+- Read [`references/invocation.md`](references/invocation.md) when constructing the command, prompt, or output contract.
 - Read [`references/verification.md`](references/verification.md) when external findings will affect code/docs, when agents may run in parallel, or when an external call fails or returns uncertain evidence.
 
 If routing is obvious but delegation is not worthwhile, stop here and continue in Codex; do not load role references.
@@ -69,6 +85,7 @@ If routing is obvious but delegation is not worthwhile, stop here and continue i
 - Avoid concurrent edits to the same working tree.
 - Verify external findings proportionally to risk before acting on them.
 - Do not create agent-to-agent repair loops.
+- Record actual runtime identity/cost metadata when available; never equate CLI brand with model identity.
 
 ## Core principle
 
