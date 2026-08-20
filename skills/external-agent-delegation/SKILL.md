@@ -7,8 +7,6 @@ description: "Delegate bounded software-development work from Codex to external 
 
 Codex is the primary agent. External agents are bounded helpers, not peers and not an orchestration layer.
 
-The goal is **cost-adjusted capability**: move context-heavy or repetitive work to the cheapest capable agent while Codex keeps the difficult decisions, source-code ownership, integration, and final verification.
-
 ## Routing
 
 | Work | Default owner |
@@ -29,65 +27,49 @@ Split only the bounded subtask that fits an external role. Keep the parent task 
 
 ## Delegation threshold
 
-Delegate when at least one is true:
+Delegate when the subtask is context-heavy/repetitive but low-judgment, has a clean input/output boundary, can run independently, or benefits from an independent repository read/review.
 
-- the subtask consumes substantial context/tokens but requires little judgment;
-- it has a clean input/output boundary and an objective completion signal;
-- it can run independently while Codex continues useful work;
-- an independent repository read or review adds confidence.
+Do not delegate tiny work, work whose explanation costs as much as execution, work that depends on private in-flight reasoning, or work whose correctness cannot be cheaply checked. Cost matters: if external-agent overhead is comparable to doing the task directly, keep it in Codex.
 
-Do not delegate when:
+## Use the wrapper, not raw CLI calls
 
-- explaining the task costs about as much as doing it;
-- important context exists only in Codex's current reasoning;
-- the action is tiny;
-- correctness cannot be cheaply checked;
-- delegation would move architecture or product decisions away from Codex;
-- a paid health check or delegation overhead would cost more than doing the tiny task directly.
+For ordinary delegation invoke [`scripts/external_agent.py`](scripts/external_agent.py). It owns CLI capability discovery/caching, tool-level `workdir`, structured-output normalization, outer/inner JSON parsing, actual model/service-tier/cost extraction, Windows encoding warnings, and permission-block detection.
 
-## Prefer external agents over native subagents
+```text
+python scripts/external_agent.py claude --task "<bounded task>" --workdir .
+python scripts/external_agent.py agy --task "<repository task>" --workdir .
+```
 
-When a bounded task clearly fits Claude or AGY, prefer that external agent over a native Codex subagent. Native subagents are fallback capacity when the external CLI is unavailable, the task genuinely needs Codex-level parallel reasoning, the user explicitly requests native agents, or neither external role safely fits.
+For long prompts prefer `--task-file`. `--health` and `--dry-run` are local-only and must not call a model.
 
-## Runtime rules before invoking a CLI
+Do not bypass the wrapper unless debugging or adapting the wrapper itself.
 
-External CLI syntax and output are environment-dependent. Never assume that a flag or output schema from documentation, another host, or a previous run is supported locally.
+The wrapper does **not** decide whether to delegate, how to split the task, whether findings are trustworthy, or whether code should change. Those remain Codex responsibilities.
 
-Before the first real external-agent invocation in an environment, read [`references/cli-runtime.md`](references/cli-runtime.md). Its rules are mandatory for:
+## Load only role-specific guidance
 
-- validating CLI flags with local `--help` before relying on them;
-- preferring the execution tool's working directory over speculative CLI `--cwd` flags;
-- parsing structured-output envelopes before parsing the semantic `result` payload;
-- recording the actual runtime model, service tier, usage, and cost when exposed;
-- avoiding unnecessary paid health checks;
-- handling Windows/non-ASCII path encoding safely.
-
-Do not escalate permissions merely because a normal invocation fails. Dangerous permission-bypass flags require explicit user authorization and must never be an automatic fallback.
-
-## Load role instructions only when needed
-
-Use progressive disclosure. Do not read every reference merely because this skill triggered.
+Use progressive disclosure:
 
 - Before delegating to **Claude**, read [`references/claude.md`](references/claude.md).
 - Before delegating to **AGY**, read [`references/agy.md`](references/agy.md).
-- Read [`references/invocation.md`](references/invocation.md) when constructing the command, prompt, or output contract.
-- Read [`references/verification.md`](references/verification.md) when external findings will affect code/docs, when agents may run in parallel, or when an external call fails or returns uncertain evidence.
+- Read [`references/verification.md`](references/verification.md) only when findings affect code/docs, agents run in parallel, or results are uncertain/failing.
+- Read [`references/invocation.md`](references/invocation.md) only for wrapper options, output schema, or wrapper debugging.
+- `references/cli-runtime.md` documents wrapper internals; do not load it for ordinary delegation.
 
-If routing is obvious but delegation is not worthwhile, stop here and continue in Codex; do not load role references.
+## Permission boundary
+
+Never automatically escalate AGY permissions. If the wrapper returns `permission_blocked` with `requires_explicit_authorization: true`, stop and obtain explicit user authorization before retrying with dangerous permission mode. Dangerous mode must be explicit in the wrapper call and acknowledged with `--ack-dangerous-permissions`.
 
 ## Universal guardrails
 
 - External output is evidence/input, never authoritative final reasoning.
 - Codex owns business/source-code edits and final acceptance.
-- AGY is read-only by default; documentation edits are allowed only when documentation work was explicitly requested and scope is already defined.
+- AGY is read-only by default; scoped documentation edits are allowed only when explicitly requested.
 - Claude is a bounded executor, not a design authority.
-- Do not ask an external agent to both investigate and autonomously fix an open-ended problem.
+- Prefer external agents over native Codex subagents when a bounded task clearly fits; native subagents are fallback capacity.
 - Avoid concurrent edits to the same working tree.
-- Verify external findings proportionally to risk before acting on them.
+- Verify external findings proportionally to risk.
 - Do not create agent-to-agent repair loops.
-- Record actual runtime identity/cost metadata when available; never equate CLI brand with model identity.
-
-## Core principle
 
 ```text
 Codex  = think, design, implement, integrate

@@ -1,66 +1,65 @@
-# External CLI invocation
+# Wrapper invocation
 
-Use the execution tool's working directory as the default repository context. Add a CLI-specific cwd flag only if the locally installed CLI supports it and the task actually needs it.
+Ordinary external-agent calls go through `scripts/external_agent.py`; raw CLI syntax is an implementation detail.
 
-Before constructing a real command, follow [`cli-runtime.md`](cli-runtime.md): validate uncertain flags with local `--help`, treat structured output as a transport envelope, and record runtime/cost metadata exposed by the CLI.
-
-Prompts must state scope, permissions, completion criteria, and output shape.
-
-## Claude
-
-A typical headless shape may be:
-
-```powershell
-claude -p "<bounded task; include commands, constraints, and required output>" --output-format json
-```
-
-Treat this as an example, not a guaranteed contract. Verify supported flags locally before relying on them.
-
-For test/log chores, default to no file edits.
-
-Prefer this split:
+## Common calls
 
 ```text
-Claude: run / extract / measure -> evidence
-Codex: reason -> decide -> fix
+python scripts/external_agent.py claude --task "Run the specified tests and summarize failures" --workdir .
+python scripts/external_agent.py agy --task "Map callers and dependencies for X" --workdir .
 ```
 
-Do not ask Claude to "investigate and fix" an open-ended problem.
-
-Suggested semantic result contract:
+For long/multiline prompts:
 
 ```text
-status
-commands_run
-failures_or_findings
-measurements
-relevant_paths_or_log_locations
-unresolved_items
+python scripts/external_agent.py claude --task-file task.txt --workdir .
 ```
 
-If `--output-format json` returns an outer object whose `result` is a string, parse the outer envelope first. If `result` contains a fenced JSON block, strip the fence and parse that inner value separately. Preserve outer metadata such as model usage, cost, service tier, duration, session id, and errors.
-
-## AGY
-
-Do not hard-code `--cwd` or sandbox/permission flags. The execution tool's `workdir` is sufficient unless local `agy --help` confirms another mechanism is required.
-
-For read-only investigation or review, construct the command from flags verified by the installed binary. Prefer the least-privileged mode that actually works.
-
-For explicitly delegated documentation edits, allow edits only after the user requested documentation work and Codex has already bounded the documentation paths.
-
-Suggested semantic result contract:
+Useful local-only checks:
 
 ```text
-summary
-files_examined
-findings (with file/symbol references)
-risks
-missing_tests_or_docs
-recommended_followups
+python scripts/external_agent.py claude --health --pretty
+python scripts/external_agent.py agy --task "..." --dry-run --pretty
+python scripts/external_agent.py --self-test --pretty
 ```
 
-If normal AGY permissions or supported sandbox modes are blocked by the local environment, do not automatically add a permission-bypass flag. A flag such as `--dangerously-skip-permissions` is a separate high-risk degradation path and requires explicit user authorization before use.
+`--health` performs only executable/version/help discovery. `--dry-run` validates capabilities and constructs the command without invoking a model. Capability help is cached by executable+version and refreshed automatically when the version changes; use `--refresh-capabilities` to force it.
 
-Prefer paths, symbols, command names, failing tests, measurements, and concrete evidence over long prose.
+## Stable output contract
 
-Do not rely on prose in the prompt as a security boundary. Use verified CLI permissions plus the surrounding execution sandbox/tool permissions when available.
+The wrapper emits one JSON object:
+
+```text
+schema_version
+ok
+agent
+cli { executable, version, capabilities_cache_hit }
+execution { workdir, exit_code, duration_ms, mode, permission_mode }
+runtime { actual_model, service_tier, cost_usd, usage/model_usage }
+transport { selected session/duration/error metadata }
+result
+warnings[]
+encoding_suspects[]
+error
+```
+
+`result` is already normalized: if the CLI emitted an outer JSON envelope with a `result` string containing a fenced JSON block, the wrapper removes the fence and parses the inner JSON. Callers should consume `result` directly and retain `runtime` for model/cost accounting.
+
+Use `--max-cost-usd N` to flag `COST_BUDGET_EXCEEDED` after a call when the CLI reports cost. This is accounting/feedback, not a pre-call hard limit unless the underlying CLI exposes one.
+
+## Modes
+
+Default mode is `read-only`. Use `--mode docs-edit` only for explicitly scoped documentation edits.
+
+For AGY, dangerous permission bypass is never automatic. A retry is allowed only after explicit user authorization:
+
+```text
+python scripts/external_agent.py agy --task "..." \
+  --permission-mode dangerous --ack-dangerous-permissions
+```
+
+If the installed AGY does not advertise the dangerous flag, the wrapper refuses the request.
+
+## Raw CLI fallback
+
+Bypass the wrapper only while debugging/adapting it. In that case inspect the installed CLI's local `--help`; do not copy flags from old docs or another machine.

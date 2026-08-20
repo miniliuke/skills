@@ -1,83 +1,37 @@
-# CLI runtime and output handling
+# Wrapper runtime contract
 
-External CLI examples are hints, not contracts. Validate the installed binary before relying on flags or output shape.
+This file documents `scripts/external_agent.py` internals. **Do not load it for ordinary delegation.** The wrapper implements these rules deterministically so the model does not need to reason through them on every call.
 
-## Validate local CLI capabilities first
+## Capability discovery
 
-Before using a CLI option that has not already been verified in the current environment, run the local help command and inspect the supported flags:
+- Resolve the installed executable from `PATH`.
+- Read `--version` on each invocation (local/no model call).
+- Cache `--help` capability detection by executable+version.
+- Prefer subprocess `cwd`/tool workdir; never require a CLI-specific `--cwd`.
+- Only pass optional flags that the installed CLI advertises.
 
-```text
-<cli> --help
-```
+## Transport parsing
 
-For subcommands, inspect the relevant subcommand help as needed.
-
-Do not assume that documentation, another machine, or a previous version matches the installed binary. In particular, verify flags such as `--cwd`, `--sandbox`, permission modes, and structured-output options before use.
-
-If the execution tool already provides a working directory, prefer that tool-level `workdir` instead of adding a CLI-specific cwd flag unless the CLI explicitly requires one.
-
-## Structured output is a transport envelope
-
-Do not assume `--output-format json` means the top-level JSON is the requested business object.
-
-Treat CLI output as layered transport data:
-
-1. parse the outer JSON object;
-2. inspect status/error metadata before trusting the payload;
-3. locate the semantic payload field, commonly `result`;
-4. if that field is a string containing a fenced block such as `````json ... `````, strip the fence;
-5. parse the inner JSON only when the task requested structured JSON;
-6. retain useful outer metadata such as model usage, cost, duration, service tier, session id, or errors.
-
-Conceptually:
+Structured CLI stdout may be layered:
 
 ```text
-stdout
-  -> outer CLI JSON envelope
-      -> metadata / usage / cost
-      -> result
-          -> optional markdown code fence
-              -> business JSON or text
+outer CLI JSON
+  -> runtime/session/cost metadata
+  -> result string
+      -> optional fenced JSON
+          -> semantic JSON/text
 ```
 
-Never silently discard the outer envelope before recording execution metadata.
+The wrapper parses this into stable top-level `runtime`, `transport`, and normalized `result` fields. It preserves reported actual model/service-tier/cost metadata instead of inferring model identity from the CLI name.
 
-If the inner value is not valid JSON, treat it as text rather than forcing a parse.
+## Cost and health
 
-## Record actual runtime identity and cost
+`--health` and `--dry-run` must never invoke a model. Model-backed probes are intentionally not part of the wrapper health path. `--max-cost-usd` is a post-call warning threshold when reported cost is available.
 
-The executable name is not the model identity. When output exposes runtime metadata, record the actual values returned by the service, for example:
+## Encoding
 
-```text
-cli
-actual_model
-service_tier
-cost_usd
-usage
-```
+Subprocess bytes are decoded UTF-8 first with locale fallback. Semantic output is scanned for obvious mojibake/replacement markers such as `锟斤拷` or `�`; suspicious values are surfaced in `encoding_suspects` rather than silently trusted.
 
-Do not infer `actual_model` from a command name such as `claude` or `agy`.
+## Permission handling
 
-## Lightweight health checks and cost
-
-Do not invoke a paid model merely to prove that a CLI binary exists.
-
-Prefer, in order:
-
-1. `<cli> --help` or version/help output;
-2. a documented local/non-model diagnostic if available;
-3. a minimal model-backed probe only when model connectivity itself must be verified.
-
-A model-backed health check can have non-trivial cost even when the prompt is simple. If the task is tiny and delegation overhead or expected model cost is comparable to doing it directly in Codex, do not delegate solely for a health check.
-
-When a model-backed probe is necessary, keep the prompt minimal and record the reported cost/usage.
-
-## Windows path and encoding hygiene
-
-External-agent text may pass through shells, JSON encoders, consoles, and model output. Non-ASCII Windows filenames can therefore become mojibake.
-
-- Prefer UTF-8 structured output when the CLI supports it.
-- Ask agents to return paths in structured fields rather than prose when possible.
-- Preserve the raw returned path string for diagnostics.
-- If a path contains replacement-looking text such as `锟斤拷`, do not assume that is the real filename; verify the path against the filesystem before using it for edits or conclusions.
-- When exact filenames matter, have Codex/tooling enumerate the directory and reconcile the agent-reported path with the actual filesystem entry.
+AGY permission failures are normalized to `permission_blocked`. If the installed CLI advertises a dangerous bypass, the wrapper may return a retry hint but must never auto-retry. Dangerous mode requires both an explicit mode argument and an acknowledgement flag; the surrounding agent is responsible for obtaining user authorization first.
