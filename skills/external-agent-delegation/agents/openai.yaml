@@ -1,5 +1,0 @@
-interface:
-  display_name: "External Agent Delegation"
-  short_description: "Route bounded work to Claude or AGY"
-policy:
-  allow_implicit_invocation: true
