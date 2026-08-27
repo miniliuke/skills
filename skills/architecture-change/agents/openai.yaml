@@ -1,5 +1,0 @@
-interface:
-  display_name: "Architecture Change"
-  short_description: "Plan an architecture-changing feature or refactor"
-policy:
-  allow_implicit_invocation: false
