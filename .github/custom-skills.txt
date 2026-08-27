@@ -1,4 +1,3 @@
 architecture
 architecture-guard
 tdd-guard
-external-agent-delegation
