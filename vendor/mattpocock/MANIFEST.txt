@@ -3,7 +3,6 @@ engineering/diagnosing-bugs
 engineering/domain-modeling
 engineering/grill-with-docs
 engineering/improve-codebase-architecture
-engineering/tdd
 productivity/grill-me
 productivity/grilling
 productivity/writing-for-agents
