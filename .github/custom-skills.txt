@@ -1,3 +1,4 @@
+architecture-guard
 architecture-workflow
 new-project-architecture
 new-module-architecture
@@ -5,4 +6,5 @@ architecture-change
 architecture-review
 architecture-health
 architecture-documentation
+tdd-guard
 external-agent-delegation
