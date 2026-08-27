@@ -1,5 +1,0 @@
-interface:
-  display_name: "New Project Architecture"
-  short_description: "Design architecture for a new project"
-policy:
-  allow_implicit_invocation: false
