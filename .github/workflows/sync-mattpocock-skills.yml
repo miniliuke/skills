@@ -108,7 +108,6 @@ jobs:
             "engineering/improve-codebase-architecture"
             "engineering/diagnosing-bugs"
             "engineering/grill-with-docs"
-            "engineering/tdd"
             "productivity/grill-me"
             "productivity/grilling"
             "productivity/writing-for-agents"
