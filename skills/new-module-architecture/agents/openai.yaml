@@ -1,5 +1,0 @@
-interface:
-  display_name: "New Module Architecture"
-  short_description: "Design a new module in an existing project"
-policy:
-  allow_implicit_invocation: false
