@@ -1,5 +1,0 @@
-interface:
-  display_name: "Architecture Workflow"
-  short_description: "Explicit architecture design workflow"
-policy:
-  allow_implicit_invocation: false
