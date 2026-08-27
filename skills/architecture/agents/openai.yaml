@@ -1,0 +1,5 @@
+interface:
+  display_name: "Architecture"
+  short_description: "Design, change, review, document, or improve architecture"
+policy:
+  allow_implicit_invocation: false
