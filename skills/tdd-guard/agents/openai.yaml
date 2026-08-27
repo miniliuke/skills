@@ -1,0 +1,5 @@
+interface:
+  display_name: "TDD Guard"
+  short_description: "Lightweight test-first implementation discipline"
+policy:
+  allow_implicit_invocation: true
