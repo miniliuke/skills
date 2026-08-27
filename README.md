@@ -1,19 +1,10 @@
-# Architecture Skills Bundle
+# Agent Engineering Skills Bundle
 
-A self-contained set of agent skills for **designing, implementing, reviewing, documenting, and maintaining software architecture with modern coding agents**.
-
-The repository combines:
-
-1. custom architecture workflow skills maintained here; and
-2. automatically synchronized stable skills from [`mattpocock/skills`](https://github.com/mattpocock/skills).
-
-The core idea is deliberately lightweight:
-
-> Use the agent's native Plan Mode for ordinary planning. Add specialized skills only when domain, module, interface, documentation, review, or long-lived architecture reasoning is needed.
+A lightweight set of skills for modern coding agents. The goal is not to add process to every change: ordinary development should use the agent's native planning flow with small guardrails, while deep design remains explicitly opt-in.
 
 ## Install
 
-List everything available from this bundle:
+List available skills:
 
 ```bash
 npx skills add miniliuke/skills --list
@@ -25,212 +16,158 @@ Install the complete bundle:
 npx skills add miniliuke/skills --skill '*'
 ```
 
-For Antigravity:
+Antigravity:
 
 ```bash
 npx skills add miniliuke/skills --skill '*' --agent antigravity
 ```
 
-For Claude Code:
+Claude Code:
 
 ```bash
 npx skills add miniliuke/skills --skill '*' --agent claude-code
 ```
 
-No separate `mattpocock/skills` installation is required when using the full bundle.
+## Default development flow
 
-## Custom architecture skills
-
-| Skill | When to use | Main outcome |
-|---|---|---|
-| `architecture-workflow` | Unsure which architecture workflow a task needs | Routes to the lightest appropriate workflow |
-| `architecture-documentation` | Documenting an existing project, updating architecture docs, or reconciling docs with code | Accurate current-state architecture documentation without silently redesigning the codebase |
-| `new-project-architecture` | Starting a new codebase or major subsystem | Domain model, module map, dependency rules, architecture contract |
-| `new-module-architecture` | Adding a module / plugin / subsystem | Justified module seam, interface, dependencies, integration plan |
-| `architecture-change` | Changing boundaries, ownership, public interfaces, dependencies, or runtime flow | Architecture impact analysis and migration-safe plan |
-| `architecture-review` | Reviewing a plan/diff/PR for structural regressions | Architecture findings independent from ordinary code review |
-| `architecture-health` | Periodic architectural maintenance | Prioritized structural improvement candidates |
-
-These names are protected by `.github/custom-skills.txt`; the upstream sync workflow will fail instead of overwriting them if an upstream name ever collides.
-
-## Vendored Matt Pocock skills
-
-The synchronization workflow mirrors all stable skills directly under these upstream groups:
-
-```text
-mattpocock/skills/skills/engineering/*
-mattpocock/skills/skills/productivity/*
-```
-
-Only directories containing `SKILL.md` are mirrored into this repository's top-level `skills/<name>/` layout.
-
-This includes the architecture/development toolchain such as:
-
-```text
-domain-modeling
-codebase-design
-grilling
-grill-with-docs
-grill-me
-to-spec
-to-tickets
-implement
-tdd
-code-review
-improve-codebase-architecture
-diagnosing-bugs
-research
-prototype
-...
-```
-
-The entire skill directory is copied, including companion `agents/`, scripts, and reference Markdown files where present.
-
-`deprecated`, `in-progress`, and `misc` upstream groups are intentionally not mirrored into the stable bundle.
-
-## Workflow philosophy
-
-### Ordinary change
+Ordinary features and bug fixes should not start separate architecture or TDD workflows:
 
 ```text
 Requirement
   -> Native Plan Mode
   -> Execute
+       + architecture-guard
+       + tdd-guard
   -> Tests
   -> Review
 ```
 
-Do not invoke extra process just to make a simple change look rigorous.
+The guards are implementation disciplines, not additional planning stages.
 
-### Existing project: establish or maintain architecture documentation
+## Architecture: two entry points only
 
-```text
-Existing codebase
-  -> architecture-documentation
-      -> Bootstrap   (no authoritative architecture doc)
-      -> Update      (verified structural change landed)
-      -> Reconcile   (docs may have drifted from code)
-```
+### `architecture-guard`
 
-`architecture-documentation` records the architecture that **exists now**. It separates observed architecture, intended invariants, known deviations, and structural debt. Planned/target architecture must stay in a plan/spec/ADR until implementation and architecture review establish it as current reality.
+Implicit lightweight guardrail for ordinary development.
 
-### New project
+It checks only whether a change accidentally breaks:
 
-```text
-Requirement discussion
-  -> new-project-architecture
-      -> domain-modeling
-      -> codebase-design
-      -> Native Plan Mode
-      -> ARCHITECTURE.md / ADR where useful
-  -> Execute
-  -> architecture-review
-```
+- module ownership;
+- dependency direction;
+- public contracts / seams;
+- abstraction boundaries.
 
-### New module
+If no conflict exists, it should stay silent and should not invoke deeper architecture skills.
+
+### `architecture`
+
+The single explicit architecture skill a human needs to remember.
+
+Use it when the task itself is architecture work, such as:
 
 ```text
-Requirement
-  -> new-module-architecture
-      -> read CONTEXT / ADR / ARCHITECTURE
-      -> justify module boundary
-      -> domain-modeling when vocabulary changes
-      -> codebase-design
-      -> Native Plan Mode
-  -> Execute
-  -> architecture-review
+design a new project architecture
+design a new module/plugin
+change existing module boundaries
+review architecture in a plan/diff/PR
+create or update ARCHITECTURE.md
+assess structural health and improvement opportunities
 ```
 
-### Architecture-changing feature
+It infers one mode automatically:
 
 ```text
-Requirement
-  -> architecture-change
-      -> Architecture Impact
-      -> domain-modeling when semantics change
-      -> codebase-design when seams/interfaces change
-      -> migration / compatibility plan
-      -> Native Plan Mode
-  -> Execute
-  -> architecture-review
-  -> architecture-documentation (Update)
+Design    new project / module / subsystem
+Change    ownership / dependency / seam / runtime-flow changes
+Review    architecture conformance of a plan/diff/branch/PR
+Document  Bootstrap / Update / Reconcile architecture documentation
+Health    structural health assessment and prioritized improvements
 ```
 
-The documentation update happens after the landed structure is verified, not when the target design is merely planned.
+There is no longer a user-facing choice between `architecture-change`, `new-module-architecture`, `architecture-review`, and similar workflow skills.
 
-### Periodic health check
+`architecture` also avoids automatic skill cascades. Use `domain-modeling` only when domain meaning/lifecycle ownership is actually unresolved, and `codebase-design` only when a load-bearing module/interface needs deeper focused design.
+
+## TDD
+
+### `tdd-guard`
+
+Implicit lightweight TDD discipline:
 
 ```text
-Several features / one milestone
-  -> architecture-health
-      -> improve-codebase-architecture
-      -> select only high-value candidates
-  -> architecture-change
-  -> Execute
-  -> architecture-review
-  -> architecture-documentation (if structural truth changed)
+testable behavior
+  -> smallest useful failing test
+  -> confirm expected failure
+  -> smallest reasonable implementation
+  -> pass the focused test
+  -> run relevant nearby regression tests
 ```
 
-## `to-spec` and `to-tickets`
+It does not create a separate TDD plan, seam-design session, or testing-strategy document. It also does not invoke `codebase-design` merely to place an ordinary test.
 
-They remain available in the bundle, but are not mandatory for ordinary single-agent work.
+Test-first is not forced when there is no practical test setup, the change is documentation/trivial configuration, or creating a harness would cost substantially more than the requested change.
 
-Use a durable spec when:
+## Vendored Matt Pocock skills
 
-- work spans multiple sessions;
-- several people/agents must share the same design contract;
-- a core SPI or public contract changes;
-- the reasoning must be recoverable later.
+CI synchronizes only upstream skills that still provide independent value:
 
-Use tickets when they create useful execution boundaries: parallel ownership, resumability, or explicit blocking order.
+```text
+codebase-design
+domain-modeling
+diagnosing-bugs
+grill-with-docs
+grill-me
+grilling
+writing-for-agents
+```
 
-## Project architecture memory
+The upstream `tdd` and `improve-codebase-architecture` skills are intentionally not mirrored because their relevant responsibilities are covered by the lightweight guard and unified architecture skill.
 
-Use three kinds of persistent architecture memory for different jobs:
+Use `codebase-design` directly when module/interface/seam design is itself the task. Use `domain-modeling` directly when canonical concepts, terminology, state, or lifecycle ownership are unresolved. Neither is a mandatory step for ordinary feature development.
+
+## Persistent architecture memory
+
+Keep three concerns separate:
 
 ```text
 CONTEXT.md
-  Domain language.
-  "What do these concepts mean?"
+  Domain language: what do the concepts mean?
 
 docs/adr/
-  Consequential decisions.
-  "Why did we deliberately choose this?"
+  Consequential decisions: why was this choice made?
 
-ARCHITECTURE.md (or the repo's authoritative architecture doc)
-  Verified current structural truth + active constraints.
-  "How is the system actually divided now, and what rules should future changes preserve?"
+ARCHITECTURE.md
+  Verified current structural truth and active constraints.
 ```
 
-`architecture-documentation` maintains the third category and should prefer surgical updates over full rewrites.
-
-Keep architecture documentation compact and explicit. Prefer rules such as:
+Important rule:
 
 ```text
-Allowed: application -> dataset-api
-Forbidden: dataset-api -> connector-mysql
-Rule: application must not branch on connector type
+ARCHITECTURE.md describes architecture that has actually landed.
+A planned target architecture is not current-state documentation.
 ```
 
-over generic advice such as "keep coupling low".
+The `architecture` skill's Document mode handles Bootstrap, Update, and Reconcile work.
 
 ## Automatic upstream synchronization
 
 `.github/workflows/sync-mattpocock-skills.yml`:
 
 - runs daily and supports manual dispatch;
-- clones the current upstream `main` branch without executing upstream scripts;
-- mirrors stable `engineering` and `productivity` skill directories;
-- removes vendored skills that were removed upstream;
-- refuses symlink-containing upstream skill directories;
-- refuses collisions with locally maintained custom skill names;
-- validates each vendored `SKILL.md` frontmatter name against its directory;
-- records the exact upstream SHA in `vendor/mattpocock/UPSTREAM_COMMIT`;
-- preserves Matt Pocock's MIT license in `vendor/mattpocock/LICENSE`;
-- commits only when the mirrored content actually changes.
+- synchronizes only explicitly selected Matt Pocock skills;
+- never executes upstream scripts;
+- protects custom skill names listed in `.github/custom-skills.txt` from silent upstream replacement;
+- validates vendored `SKILL.md` names;
+- records the upstream commit SHA and preserves the MIT license;
+- creates no empty commit when synchronized content has not changed.
 
-## Third-party license
+## Mental model
 
-Vendored Matt Pocock content is MIT licensed. See `THIRD_PARTY_NOTICES.md` and `vendor/mattpocock/LICENSE`.
+A human only needs to remember:
 
-The custom architecture skills in this repository are maintained independently from the vendored upstream content.
+```text
+ordinary development: do not choose an architecture skill
+actual architecture work: use architecture
+```
+
+The skill itself handles the remaining mode selection instead of exposing a workflow taxonomy to the user.
