@@ -1,5 +1,5 @@
 interface:
   display_name: "Architecture Workflow"
-  short_description: "Route work to the lightest architecture flow"
+  short_description: "Explicit architecture design workflow"
 policy:
-  allow_implicit_invocation: true
+  allow_implicit_invocation: false
