@@ -1,5 +1,0 @@
-interface:
-  display_name: "Architecture Health"
-  short_description: "Assess structural health and improvement candidates"
-policy:
-  allow_implicit_invocation: false
