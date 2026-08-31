@@ -1,5 +1,0 @@
-interface:
-  display_name: "Architecture Guard"
-  short_description: "Lightweight architecture boundary checks"
-policy:
-  allow_implicit_invocation: true

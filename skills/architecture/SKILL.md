@@ -8,7 +8,7 @@ disable-model-invocation: true
 
 This is the single explicit entry point for architecture work.
 
-For ordinary development, do not use this skill; `architecture-guard` is enough.
+For ordinary development, do not use this skill. Let Ponytail and the baseline engineering guardrails govern normal implementation.
 
 Do not make the user choose between separate architecture workflows. Infer the mode from the request and do only the work needed for that mode.
 

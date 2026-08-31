@@ -1,3 +1,1 @@
 architecture
-architecture-guard
-tdd-guard

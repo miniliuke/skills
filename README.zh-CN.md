@@ -1,20 +1,66 @@
-# Agent Engineering Skills Bundle（中文说明）
+# Agent Specialist Skills Bundle（中文说明）
 
-这是一套面向 Coding Agent 的轻量工程 Skills 集合。目标不是建立更多流程，而是让 Agent 在默认开发流程中遵守少量关键约束，只在确实需要时进入深度设计。
+这是一套面向 Coding Agent 的**专项工程 Skills** 集合。
 
-## 安装
+新的职责边界很简单：
 
-查看全部 Skill：
+```text
+Ponytail
+  -> 常驻负责 YAGNI、复用优先、最小实现、避免过度工程
+
+Minimal engineering guardrails
+  -> 常驻负责架构安全底线 + 轻量 TDD 纪律
+
+skills/
+  -> 只处理真正需要专项方法论的任务
+```
+
+普通 Feature / Bug / UI / 配置修改不应该为了“走流程”而调用本仓库任何 Skill。
+
+## 1. 先安装 Ponytail
+
+本仓库不再复制 Ponytail，也不再用 Skill 重复实现它的复杂度控制规则。推荐直接使用官方插件：
+
+[Ponytail](https://github.com/DietrichGebert/ponytail)
+
+### Codex
+
+```bash
+codex plugin marketplace add DietrichGebert/ponytail
+codex
+```
+
+进入 Codex 后：
+
+```text
+/plugins -> 从 Ponytail marketplace 安装 Ponytail
+/hooks   -> 检查并信任两个 lifecycle hooks
+```
+
+然后开启新 thread。Node.js 需要在非交互 shell 的 PATH 中，才能启用常驻 hook 注入。
+
+### Claude Code
+
+```text
+/plugin marketplace add DietrichGebert/ponytail
+/plugin install ponytail@ponytail
+```
+
+## 2. 安装本仓库的专项 Skills
+
+查看可用 Skill：
 
 ```bash
 npx skills add miniliuke/skills --list
 ```
 
-安装完整集合：
+如果希望全部安装：
 
 ```bash
 npx skills add miniliuke/skills --skill '*'
 ```
+
+现在 `skills/` 中只保留专项能力，因此全量安装不再意味着给普通开发附加默认 workflow。
 
 Antigravity：
 
@@ -28,114 +74,108 @@ Claude Code：
 npx skills add miniliuke/skills --skill '*' --agent claude-code
 ```
 
-## 默认开发原则
+## 3. 最小常驻工程约束
 
-普通 Feature / Bug 不启动额外 architecture 或 TDD workflow：
+`guardrails/engineering.md` 是一个很短的、**非 Skill** 的规则片段，适合合并到全局或项目级 `AGENTS.md` / agent instructions。
 
-```text
-Requirement
-  -> Agent Plan Mode
-  -> Execute
-       + architecture-guard
-       + tdd-guard
-  -> Tests
-  -> Review
-```
+它只补 Ponytail 不负责的两件事：
 
-`architecture-guard` 和 `tdd-guard` 是轻量行为约束，不应该产生额外的设计会话、文档或长篇分析。
+- 架构安全底线：ownership、dependency direction、public contract / seam；
+- 轻量 TDD：已有测试设施时，优先最小失败测试 -> 最小实现 -> 相关回归测试。
 
-## 架构 Skills：只保留两个入口
+它不会重复 Ponytail 的 YAGNI / 少写代码 / 复用规则，也不会启动额外 workflow。
 
-### `architecture-guard`
-
-默认隐式使用。
-
-它只检查普通修改是否意外破坏：
-
-- 模块 ownership；
-- dependency direction；
-- public contract / seam；
-- abstraction 边界。
-
-没有冲突时不输出架构分析，也不自动调用其他架构 Skill。
+## 4. 当前专项 Skills
 
 ### `architecture`
 
-唯一需要人主动记住的架构 Skill。
+**显式架构入口。** 用于：
 
-当用户明确要做架构工作时使用，例如：
+- 新项目 / 新 subsystem / 新模块架构设计；
+- ownership、dependency、public seam、runtime/data flow 等结构性变更；
+- 架构 Review；
+- `ARCHITECTURE.md` Bootstrap / Update / Reconcile；
+- 显式的架构健康检查。
 
-```text
-设计新项目架构
-设计新模块/插件
-调整现有模块边界
-做架构 Review
-建立或更新 ARCHITECTURE.md
-分析项目架构问题并提出优化方向
-```
+它内部按请求选择 Design / Change / Review / Document / Health，一个任务只进入需要的模式。
 
-内部会根据请求自动选择模式：
+### `codebase-design`
 
-```text
-Design    新项目 / 新模块 / 新 subsystem
-Change    ownership / dependency / seam / runtime flow 变化
-Review    plan / diff / branch / PR 的架构检查
-Document  Bootstrap / Update / Reconcile 架构文档
-Health    结构健康检查和优化候选
-```
+当问题本身就是 load-bearing module、interface、seam、deep module 如何设计时使用。
 
-用户不需要再选择 `architecture-change`、`new-module-architecture`、`architecture-review` 等多个近似 Skill。
+不要把它作为普通 Feature 的默认设计步骤。
 
-`architecture` 默认也不会级联调用一串其他 Skill。只有领域含义本身需要重新建模时才考虑 `domain-modeling`，只有核心 module/interface 需要深入设计时才考虑 `codebase-design`。
+### `domain-modeling`
 
-## TDD
+当核心概念、术语、状态、生命周期 ownership 本身没有定义清楚时使用。
+
+普通字段、DTO、接口参数变化不因此自动进入 domain modeling。
+
+### `diagnosing-bugs`
+
+用于真正需要系统诊断的难复现 Bug、复杂故障或性能回退。
+
+明显的局部 Bug 应优先直接复现、修复、测试，不要为了一个简单错误进入完整 diagnosis workflow。
+
+### `grilling`
+
+用户明确希望对计划、设计或决策进行高强度追问 / stress-test 时使用。
+
+### `writing-for-agents`
+
+用于编写面向 Agent 的说明、规则或上下文材料。
+
+## 5. 被移除的入口
+
+### `architecture-guard`
+
+删除。架构安全底线迁移到 `guardrails/engineering.md`，不再作为 Skill 占用默认技能空间。
 
 ### `tdd-guard`
 
-默认隐式使用，把 TDD 作为开发纪律，而不是独立推理流程：
+删除。TDD 作为几条常驻工程纪律保留在 guardrail 中，而不是一个可触发的 workflow。
+
+### `grill-me`
+
+删除。它只是 `grilling` 的薄包装。
+
+### `grill-with-docs`
+
+删除。它只是 `grilling + domain-modeling` 的级联包装。确实同时需要两者时，由任务本身决定，而不是通过一个 wrapper 自动串联。
+
+上游 `tdd` 和 `improve-codebase-architecture` 仍然不镜像。
+
+## 6. 默认任务路由
 
 ```text
-可测试的行为
-  -> 最小失败测试
-  -> 确认失败原因
-  -> 最小实现
-  -> 测试通过
-  -> 必要的附近回归测试
+普通开发
+  -> Ponytail
+  -> Native Plan / Execute
+  -> minimal engineering guardrails
+  -> focused tests
+  -> done
+
+真正的专项任务
+  -> Ponytail
+  -> 选择一个最匹配的 Skill
+  -> Native Plan / Execute
+  -> done
 ```
 
-不会默认创建 TDD plan、测试策略文档、seam 设计会话，也不会为了普通测试自动引入 `codebase-design`。
-
-对于没有合适测试设施、简单配置/文档或测试脚手架成本明显超过修改本身的任务，不强制执行仪式化 test-first。
-
-## 保留的 Matt Pocock Skills
-
-CI 只同步当前仍有独立价值的上游 Skills：
+关键规则：
 
 ```text
-codebase-design
-domain-modeling
-diagnosing-bugs
-grill-with-docs
-grill-me
-grilling
-writing-for-agents
+不要因为 Skill 已安装就调用它。
+不要把多个 Skill 串成固定流水线。
+默认一个任务最多一个主 Skill。
+Supporting skill 只在它解决一个独立且真实的问题时才使用。
 ```
 
-不再同步功能已被本仓库轻量 guard / unified architecture 覆盖的 `tdd` 和 `improve-codebase-architecture`。
+Ponytail 决定**事情应该做多简单**；专项 Skill 只决定**这个专项问题应该怎么做**。
 
-### 什么时候直接使用 `codebase-design`
+## 7. 长期架构记忆
 
-当问题本身就是模块/interface/seam 如何设计，而不是泛化的架构流程时使用。
-
-### 什么时候直接使用 `domain-modeling`
-
-当核心概念、术语、状态或生命周期 ownership 本身不清楚时使用。
-
-它们都不是普通 Feature 的默认步骤。
-
-## 长期架构记忆
-
-推荐继续区分三类信息：
+继续区分：
 
 ```text
 CONTEXT.md
@@ -145,37 +185,31 @@ docs/adr/
   重要决策：为什么这样决定？
 
 ARCHITECTURE.md
-  当前已经验证的结构事实和约束：系统现在如何划分？
+  已经验证的当前结构事实与约束。
 ```
 
-重要规则：
+`ARCHITECTURE.md` 只描述已经落地的架构，不把计划中的目标状态提前写成当前事实。
+
+## 8. 自动同步
+
+`.github/workflows/sync-mattpocock-skills.yml` 每天同步仍有独立价值的 Matt Pocock Skills：
 
 ```text
-ARCHITECTURE.md 描述已经落地的当前架构。
-计划中的目标架构不能提前写成当前事实。
+codebase-design
+domain-modeling
+diagnosing-bugs
+grilling
+writing-for-agents
 ```
 
-`architecture` 的 Document 模式负责 Bootstrap / Update / Reconcile。
-
-## 自动同步
-
-`.github/workflows/sync-mattpocock-skills.yml`：
-
-- 每天同步一次，也支持手动触发；
-- 只同步明确列出的 Matt Skills；
-- 不执行上游脚本；
-- 自定义 Skill 名称记录在 `.github/custom-skills.txt`，禁止被上游同名内容静默覆盖；
-- 校验 vendored `SKILL.md` 的名称；
-- 保留上游 commit SHA 和 MIT License；
-- 没有内容变化时不产生空 commit。
+自定义 `architecture` 记录在 `.github/custom-skills.txt`，不会被上游同名内容覆盖。
 
 ## 最终心智模型
 
-人只需要记住：
+人只需要记住三句话：
 
 ```text
-普通开发：不用选 architecture skill
-真正的架构任务：architecture
+复杂度：Ponytail 管。
+普通工程纪律：guardrail 管，不是 Skill。
+专项问题：才调用 Skill。
 ```
-
-其余复杂度由 Skill 内部按需处理，而不是暴露成一串工作流名称。

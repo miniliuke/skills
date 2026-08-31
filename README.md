@@ -1,8 +1,45 @@
-# Agent Engineering Skills Bundle
+# Agent Specialist Skills Bundle
 
-A lightweight set of skills for modern coding agents. The goal is not to add process to every change: ordinary development should use the agent's native planning flow with small guardrails, while deep design remains explicitly opt-in.
+A collection of **specialist engineering skills** for coding agents.
 
-## Install
+The responsibility split is intentionally small:
+
+```text
+Ponytail
+  -> always-on YAGNI, reuse-first, minimum implementation, anti-overengineering
+
+Minimal engineering guardrails
+  -> always-on architecture safety + lightweight TDD discipline
+
+skills/
+  -> specialist methods only
+```
+
+Ordinary features, bug fixes, UI changes, and configuration edits should not invoke a skill merely to follow a process.
+
+## 1. Install Ponytail first
+
+This repository no longer duplicates Ponytail's complexity-control rules as skills. Use the upstream plugin directly:
+
+[Ponytail](https://github.com/DietrichGebert/ponytail)
+
+### Codex
+
+```bash
+codex plugin marketplace add DietrichGebert/ponytail
+codex
+```
+
+Then open `/plugins`, install Ponytail from its marketplace, open `/hooks`, review and trust its two lifecycle hooks, and start a new thread. Node.js must be on the non-interactive shell PATH for the always-on hooks.
+
+### Claude Code
+
+```text
+/plugin marketplace add DietrichGebert/ponytail
+/plugin install ponytail@ponytail
+```
+
+## 2. Install specialist skills
 
 List available skills:
 
@@ -10,11 +47,13 @@ List available skills:
 npx skills add miniliuke/skills --list
 ```
 
-Install the complete bundle:
+Install the complete specialist bundle:
 
 ```bash
 npx skills add miniliuke/skills --skill '*'
 ```
+
+Because `skills/` now contains specialist capabilities only, installing the bundle no longer adds default architecture/TDD workflow skills to ordinary development.
 
 Antigravity:
 
@@ -28,146 +67,116 @@ Claude Code:
 npx skills add miniliuke/skills --skill '*' --agent claude-code
 ```
 
-## Default development flow
+## 3. Minimal always-on engineering rules
 
-Ordinary features and bug fixes should not start separate architecture or TDD workflows:
+`guardrails/engineering.md` is a short **non-skill** snippet intended for global or project `AGENTS.md` / agent instructions.
 
-```text
-Requirement
-  -> Native Plan Mode
-  -> Execute
-       + architecture-guard
-       + tdd-guard
-  -> Tests
-  -> Review
-```
+It supplements Ponytail with only two concerns Ponytail does not own:
 
-The guards are implementation disciplines, not additional planning stages.
+- architecture safety: ownership, dependency direction, and public contracts/seams;
+- lightweight TDD: when existing test infrastructure makes it practical, prefer a small failing test, the minimum implementation, then focused regression tests.
 
-## Architecture: two entry points only
+It does not repeat Ponytail's YAGNI/reuse/minimal-code rules and does not start a workflow.
 
-### `architecture-guard`
-
-Implicit lightweight guardrail for ordinary development.
-
-It checks only whether a change accidentally breaks:
-
-- module ownership;
-- dependency direction;
-- public contracts / seams;
-- abstraction boundaries.
-
-If no conflict exists, it should stay silent and should not invoke deeper architecture skills.
+## 4. Specialist skills
 
 ### `architecture`
 
-The single explicit architecture skill a human needs to remember.
+The **explicit architecture entry point** for new system/module design, structural changes, architecture review, `ARCHITECTURE.md` maintenance, and explicit architecture-health work.
 
-Use it when the task itself is architecture work, such as:
+It selects only one relevant mode: Design, Change, Review, Document, or Health.
+
+### `codebase-design`
+
+Use when load-bearing module/interface/seam or deep-module design is itself the problem. It is not a default feature-development phase.
+
+### `domain-modeling`
+
+Use when canonical concepts, terminology, state, or lifecycle ownership are genuinely unresolved. Ordinary DTO/field/API parameter changes do not require domain modeling.
+
+### `diagnosing-bugs`
+
+Use for difficult diagnosis, hard-to-reproduce failures, complex incidents, or performance regressions. Obvious local bugs should normally be reproduced, fixed, and tested directly.
+
+### `grilling`
+
+Use when the user explicitly wants a plan, design, or decision stress-tested through a rigorous interview.
+
+### `writing-for-agents`
+
+Use for agent-facing instructions, context, and documentation.
+
+## 5. Removed entries
+
+- `architecture-guard` — moved into the non-skill engineering guardrail.
+- `tdd-guard` — reduced to a few baseline engineering rules instead of a triggerable workflow.
+- `grill-me` — removed because it was only a thin wrapper around `grilling`.
+- `grill-with-docs` — removed because it only cascaded `grilling + domain-modeling`.
+- upstream `tdd` and `improve-codebase-architecture` remain intentionally unmirrored.
+
+## 6. Default routing
 
 ```text
-design a new project architecture
-design a new module/plugin
-change existing module boundaries
-review architecture in a plan/diff/PR
-create or update ARCHITECTURE.md
-assess structural health and improvement opportunities
+ordinary development
+  -> Ponytail
+  -> native Plan / Execute
+  -> minimal engineering guardrails
+  -> focused tests
+  -> done
+
+actual specialist task
+  -> Ponytail
+  -> one best-matching skill
+  -> native Plan / Execute
+  -> done
 ```
 
-It infers one mode automatically:
+Rules:
 
 ```text
-Design    new project / module / subsystem
-Change    ownership / dependency / seam / runtime-flow changes
-Review    architecture conformance of a plan/diff/branch/PR
-Document  Bootstrap / Update / Reconcile architecture documentation
-Health    structural health assessment and prioritized improvements
+Do not invoke a skill because it is installed.
+Do not turn several skills into a fixed pipeline.
+Prefer at most one primary skill per task.
+Use a supporting skill only when it solves a separate real problem.
 ```
 
-There is no longer a user-facing choice between `architecture-change`, `new-module-architecture`, `architecture-review`, and similar workflow skills.
+Ponytail decides **how little should be built**. A specialist skill only decides **how to handle that specialist problem**.
 
-`architecture` also avoids automatic skill cascades. Use `domain-modeling` only when domain meaning/lifecycle ownership is actually unresolved, and `codebase-design` only when a load-bearing module/interface needs deeper focused design.
+## 7. Persistent architecture memory
 
-## TDD
-
-### `tdd-guard`
-
-Implicit lightweight TDD discipline:
+Keep these concerns separate:
 
 ```text
-testable behavior
-  -> smallest useful failing test
-  -> confirm expected failure
-  -> smallest reasonable implementation
-  -> pass the focused test
-  -> run relevant nearby regression tests
+CONTEXT.md
+  domain language and canonical concepts
+
+docs/adr/
+  consequential decisions and rationale
+
+ARCHITECTURE.md
+  verified current structural truth and constraints
 ```
 
-It does not create a separate TDD plan, seam-design session, or testing-strategy document. It also does not invoke `codebase-design` merely to place an ordinary test.
+`ARCHITECTURE.md` describes architecture that has actually landed, not a planned target state.
 
-Test-first is not forced when there is no practical test setup, the change is documentation/trivial configuration, or creating a harness would cost substantially more than the requested change.
+## 8. Upstream synchronization
 
-## Vendored Matt Pocock skills
-
-CI synchronizes only upstream skills that still provide independent value:
+`.github/workflows/sync-mattpocock-skills.yml` synchronizes only Matt Pocock skills that retain independent specialist value:
 
 ```text
 codebase-design
 domain-modeling
 diagnosing-bugs
-grill-with-docs
-grill-me
 grilling
 writing-for-agents
 ```
 
-The upstream `tdd` and `improve-codebase-architecture` skills are intentionally not mirrored because their relevant responsibilities are covered by the lightweight guard and unified architecture skill.
-
-Use `codebase-design` directly when module/interface/seam design is itself the task. Use `domain-modeling` directly when canonical concepts, terminology, state, or lifecycle ownership are unresolved. Neither is a mandatory step for ordinary feature development.
-
-## Persistent architecture memory
-
-Keep three concerns separate:
-
-```text
-CONTEXT.md
-  Domain language: what do the concepts mean?
-
-docs/adr/
-  Consequential decisions: why was this choice made?
-
-ARCHITECTURE.md
-  Verified current structural truth and active constraints.
-```
-
-Important rule:
-
-```text
-ARCHITECTURE.md describes architecture that has actually landed.
-A planned target architecture is not current-state documentation.
-```
-
-The `architecture` skill's Document mode handles Bootstrap, Update, and Reconcile work.
-
-## Automatic upstream synchronization
-
-`.github/workflows/sync-mattpocock-skills.yml`:
-
-- runs daily and supports manual dispatch;
-- synchronizes only explicitly selected Matt Pocock skills;
-- never executes upstream scripts;
-- protects custom skill names listed in `.github/custom-skills.txt` from silent upstream replacement;
-- validates vendored `SKILL.md` names;
-- records the upstream commit SHA and preserves the MIT license;
-- creates no empty commit when synchronized content has not changed.
+The custom `architecture` skill is protected through `.github/custom-skills.txt`.
 
 ## Mental model
 
-A human only needs to remember:
-
 ```text
-ordinary development: do not choose an architecture skill
-actual architecture work: use architecture
+Complexity: Ponytail.
+Baseline engineering discipline: guardrails, not skills.
+Specialist problem: invoke a skill.
 ```
-
-The skill itself handles the remaining mode selection instead of exposing a workflow taxonomy to the user.

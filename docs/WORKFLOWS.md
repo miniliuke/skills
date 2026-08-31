@@ -1,151 +1,102 @@
-# Architecture Workflow Guide
+# Task Routing Guide
 
-## 1. Existing project: establish architecture documentation
+This repository is not a default development workflow. Ponytail handles complexity pressure; the baseline engineering guardrail handles architecture safety and lightweight TDD; skills are reserved for specialist work.
 
-```text
-Existing codebase
-  -> architecture-documentation (Bootstrap)
-  -> inspect executable module/dependency/runtime structure
-  -> read CONTEXT / ADR / existing design docs
-  -> establish the authoritative architecture document
-```
-
-Document what exists now. Do not redesign the codebase during documentation work.
-
-If an architecture document already exists but may be stale:
+## Default path: ordinary development
 
 ```text
-Architecture docs + code
-  -> architecture-documentation (Reconcile)
-  -> classify DOC_STALE / CODE_DEVIATION / AMBIGUOUS / PLANNED_NOT_LANDED
+Requirement / bug / refactor / UI / config
+  -> Ponytail
+  -> native Plan / Execute
+  -> guardrails/engineering.md
+  -> focused tests / lightest useful verification
+  -> done
 ```
 
-## 2. New project
+Do not call `architecture`, `codebase-design`, `domain-modeling`, or `diagnosing-bugs` merely because code is being changed.
+
+## Architecture work
+
+Use `architecture` when the task itself asks for architecture design, structural change, architecture review, architecture documentation, or architecture health analysis.
 
 ```text
-Initial requirements
-  -> clarify goals / constraints
-  -> domain-modeling
-  -> codebase-design
-  -> native Plan Mode
-  -> establish ARCHITECTURE.md
-  -> execute
-  -> architecture-review
+Architecture request
+  -> architecture
+       Design | Change | Review | Document | Health
+  -> native Plan / Execute when implementation is requested
 ```
 
-Use `to-spec` only when the architecture needs durable handoff or multi-session execution.
+The skill chooses one primary mode. Do not run all modes in sequence.
 
-## 3. Ordinary feature
+Examples that justify architecture work:
+
+- designing a new project, subsystem, module, plugin, or extension seam;
+- deliberately moving ownership or changing dependency direction;
+- changing a load-bearing public seam or runtime/data-flow boundary;
+- reviewing a plan/diff/PR for architecture conformance;
+- bootstrapping, updating, or reconciling `ARCHITECTURE.md`;
+- explicit structural-health or architecture-improvement analysis.
+
+A small feature that happens to touch several files is not automatically architecture work.
+
+## Deep module / interface design
+
+Use `codebase-design` when the actual problem is where a seam belongs, what an interface should expose, or how to make a load-bearing module deeper and more coherent.
+
+Do not require it before every new class/package/module. Ponytail's minimum-design pressure still applies.
+
+## Domain modeling
+
+Use `domain-modeling` when the difficult part is the meaning of concepts, terminology, states, invariants, or lifecycle ownership.
+
+Do not invoke it merely because a request introduces a field, DTO, table column, endpoint parameter, or another ordinary data shape.
+
+## Difficult diagnosis
+
+Use `diagnosing-bugs` for failures that need a real diagnosis loop: hard reproduction, uncertain causal chain, multi-system incidents, or performance regressions.
+
+For an obvious local bug:
 
 ```text
-Requirement
-  -> native Plan Mode
-  -> execute
-  -> tests
-  -> review
+reproduce -> regression test when practical -> smallest fix -> focused tests
 ```
 
-Escalate to `architecture-change` only when the feature changes ownership, module topology, public seams, dependency direction, or domain concepts.
+No diagnosis workflow is needed.
 
-## 4. New module
+## Stress-testing a plan
+
+Use `grilling` only when the user explicitly wants a plan/design/decision challenged through an interview.
+
+There are no `grill-me` or `grill-with-docs` wrappers. If domain modeling is independently needed after grilling, invoke it because the domain is genuinely unresolved, not because a wrapper chained it.
+
+## Agent-facing writing
+
+Use `writing-for-agents` when producing durable instructions or context specifically meant for coding agents.
+
+## Architecture memory
+
+Keep these separate:
 
 ```text
-Requirement
-  -> inspect current architecture / ADRs
-  -> justify the module
-  -> domain-modeling if vocabulary changes
-  -> codebase-design
-  -> native Plan Mode
-  -> execute
-  -> architecture-review
-  -> architecture-documentation (Update) if structural truth changed
+CONTEXT.md
+  canonical domain language
+
+docs/adr/
+  consequential decisions and rationale
+
+ARCHITECTURE.md
+  verified current structural truth and active constraints
 ```
 
-Do not update current-state documentation merely because the module design was approved. Update it after the landed architecture is verified.
+Planned target architecture belongs in a plan/spec/ADR until it actually lands. Do not write future architecture as current-state truth.
 
-## 5. Architecture change
+## Routing rules
 
 ```text
-Current architecture
-  -> architecture-change
-      -> architecture impact analysis
-      -> domain-modeling if semantics change
-      -> codebase-design for new seams
-      -> migration / compatibility plan
-      -> native Plan Mode
-  -> execute
-  -> architecture-review
-  -> architecture-documentation (Update)
+1. Ponytail is always-on complexity pressure.
+2. Ordinary development uses native agent behavior + minimal guardrails.
+3. Skills are specialist tools, not mandatory phases.
+4. Prefer one primary skill per task.
+5. Never create a fixed skill cascade.
+6. Read narrowly; do not scan the whole repository to prove compliance.
 ```
-
-This separates target design from current-state documentation:
-
-```text
-Plan/spec/ADR
-  -> what we intend to change
-
-Architecture documentation
-  -> what has actually landed and been verified
-```
-
-If a migration is partially complete, document the real mixed state rather than the final target.
-
-## 6. Periodic health check
-
-```text
-Recent changes / hotspots
-  -> architecture-health
-  -> choose 1-3 high-value candidates
-  -> architecture-change
-  -> execute in small steps
-  -> architecture-review
-  -> architecture-documentation if structure changed
-```
-
-## Architecture documentation responsibilities
-
-Use `architecture-documentation` for three modes:
-
-```text
-Bootstrap
-  Build architecture documentation for an existing project.
-
-Update
-  Surgically update documentation after verified structural changes.
-
-Reconcile
-  Compare documentation with executable reality and classify drift.
-```
-
-Architecture docs should distinguish:
-
-- observed architecture;
-- architectural invariants;
-- known deviations;
-- architectural debt.
-
-Prefer surgical edits over regenerating an entire human-maintained document.
-
-## Escalation triggers
-
-Run architecture-specific design when any of these appears:
-
-- new core domain term;
-- ambiguous ownership of state/lifecycle;
-- new module/package/crate/service/plugin;
-- new public API or SPI;
-- cross-module feature;
-- dependency direction changes;
-- duplicated concept or parallel abstraction;
-- type-switching in upper layers for implementation-specific behavior;
-- two or more modules repeatedly changing together;
-- tests must reach through multiple internals to verify behavior;
-- the proposed implementation bypasses an existing seam.
-
-Run `architecture-documentation` when:
-
-- an existing project lacks an authoritative architecture document;
-- architecture documentation may be stale;
-- a verified structural change has landed and current-state documentation needs updating.
-
-Otherwise, stay with native Plan Mode.

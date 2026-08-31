@@ -32,7 +32,7 @@ jobs:
           set -euo pipefail
           git clone --depth=1 https://github.com/mattpocock/skills.git /tmp/mattpocock-skills
 
-      - name: Mirror selected upstream skills
+      - name: Mirror selected specialist skills
         shell: bash
         run: |
           set -euo pipefail
@@ -102,12 +102,13 @@ jobs:
             printf '%s\n' "$entry" >> "$manifest"
           }
 
+          # Only skills with independent specialist value belong in this bundle.
+          # Always-on complexity control belongs to Ponytail; baseline engineering
+          # discipline belongs in guardrails/engineering.md, not in a Skill.
           selected_skills=(
             "engineering/codebase-design"
             "engineering/domain-modeling"
             "engineering/diagnosing-bugs"
-            "engineering/grill-with-docs"
-            "productivity/grill-me"
             "productivity/grilling"
             "productivity/writing-for-agents"
           )
@@ -130,7 +131,7 @@ jobs:
           cp "$upstream/skills/productivity/README.md" vendor/mattpocock/PRODUCTIVITY.md
 
           echo "Synced upstream commit: $(cat vendor/mattpocock/UPSTREAM_COMMIT)"
-          echo "Vendored skills:"
+          echo "Vendored specialist skills:"
           cat "$manifest"
 
       - name: Validate vendored skills
