@@ -1,0 +1,5 @@
+interface:
+  display_name: "Backend Integration Testing"
+  short_description: "Manual backend integration tests and diagnosis"
+policy:
+  allow_implicit_invocation: false

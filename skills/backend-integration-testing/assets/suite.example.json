@@ -1,0 +1,15 @@
+{
+  "redact_env": ["TEST_DB_PASSWORD", "TEST_API_TOKEN"],
+  "preflight": [{"id": "tools", "cmd": ["python", "tests/integration/env.py", "check"]}],
+  "setup": [{"id": "services", "cmd": ["python", "tests/integration/env.py", "up"], "timeout": 300}],
+  "ready": [{"id": "health", "cmd": ["python", "tests/integration/env.py", "wait"], "timeout": 90}],
+  "seed": [{"id": "fixtures", "cmd": ["python", "tests/integration/data.py", "seed"]}],
+  "cases": [
+    {"id": "IT-001", "steps": [
+      {"id": "create", "cmd": ["python", "tests/integration/cases/create_record.py"]},
+      {"id": "verify", "cmd": ["python", "tests/integration/data.py", "assert-created"]}
+    ]}
+  ],
+  "collect": [{"id": "logs", "cmd": ["python", "tests/integration/env.py", "logs"]}],
+  "cleanup": [{"id": "owned-resources", "cmd": ["python", "tests/integration/env.py", "down"], "timeout": 60}]
+}

@@ -102,6 +102,24 @@ Use for difficult diagnosis, hard-to-reproduce failures, complex incidents, or p
 
 Use when the user explicitly wants a plan, design, or decision stress-tested through a rigorous interview.
 
+### `backend-integration-testing`
+
+**Manual invocation only.** Create, modify, and repeatedly execute backend integration tests stored in the target project. Covers CLI/Python/SQL automation, Docker/local dependencies, multiple service instances, ordered phases, bounded logs, and evidence-based diagnosis. Product-code fixes are optional and require an explicit repair/auto-iteration request.
+
+```bash
+npx skills add miniliuke/skills --skill backend-integration-testing
+```
+
+Invoke in Codex with `$backend-integration-testing`; in Claude Code use `/backend-integration-testing`. Codex automatic selection is disabled in `agents/openai.yaml`; the [Claude Code manual-only field](https://code.claude.com/docs/en/skills) is also set in frontmatter. On hosts that do not support these controls, expose it only as a manual command, outside automatic skill discovery. Ordinary test requests do not authorize invoking this skill. Generated scripts can run directly or in CI without AI.
+
+Includes an optional Python standard-library phase runner, suite configuration example, and focused case/environment guidance. Reuse existing project test runners first. The JSON example requires actual project scripts; it is not a ready-made backend test suite.
+
+Runner regression checks (no Docker required):
+
+```bash
+python -m unittest discover -s tests -p 'test_backend_integration_runner.py' -v
+```
+
 ### `writing-for-agents`
 
 Use for agent-facing instructions, context, and documentation.
@@ -171,7 +189,7 @@ grilling
 writing-for-agents
 ```
 
-The custom `architecture` skill is protected through `.github/custom-skills.txt`.
+The custom `architecture` and `backend-integration-testing` skills are protected through `.github/custom-skills.txt`.
 
 ## Mental model
 
