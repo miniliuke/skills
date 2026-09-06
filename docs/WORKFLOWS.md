@@ -63,6 +63,14 @@ reproduce -> regression test when practical -> smallest fix -> focused tests
 
 No diagnosis workflow is needed.
 
+## Backend integration testing — manual only
+
+Invoke `backend-integration-testing` only when the user explicitly names it. An ordinary request to test, a failing test, CI, or another skill must not auto-route to it. It does not join the default development path.
+
+The skill leaves reusable test cases, environment/data/verification scripts and execution instructions in the target project. Prefer existing frameworks; use the bundled sequential runner only when useful. Scripts can run directly in CI without invoking a skill or model.
+
+Default scope: author/update tests, execute, collect concise evidence and diagnose. Modify product code only on an explicit repair or auto-iteration request; keep iteration bounded. Host-enforced manual invocation is configured for Codex and Claude Code; unsupported hosts must use a manual command outside automatic discovery.
+
 ## Stress-testing a plan
 
 Use `grilling` only when the user explicitly wants a plan/design/decision challenged through an interview.

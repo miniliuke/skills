@@ -121,6 +121,37 @@ npx skills add miniliuke/skills --skill '*' --agent claude-code
 
 用户明确希望对计划、设计或决策进行高强度追问 / stress-test 时使用。
 
+### `backend-integration-testing`
+
+**仅手动调用。** 规范后端集成测试的编写、修改、重复执行和日志诊断，用例及 CLI/Python/SQL 脚本保存在目标项目中，可直接在本地或 CI 重跑，不依赖模型。
+
+- 支持 Docker、本地及混合环境、多服务实例、环境准备/就绪/数据/断言/日志/清理编排。
+- AI 负责场景设计与少量失败证据分析，重复操作、数据差异和断言交给脚本。
+- 默认专注测试，不修改业务代码；明确要求“自动迭代”时才进入分析、修复、重跑循环，默认最多 3 轮。
+- 优先复用项目已有框架；附带可选的 Python 标准库运行器与 JSON 配置示例。示例中的项目脚本需按实际后端实现，不能直接视为成品用例。
+
+安装：
+
+```bash
+npx skills add miniliuke/skills --skill backend-integration-testing
+```
+
+调用示例：
+
+```text
+$backend-integration-testing 为当前后端编写可重复执行的集成测试，使用 Docker 数据库，只测试和分析，不修改业务代码。
+$backend-integration-testing 执行 IT-001，分析失败日志。
+$backend-integration-testing 对失败用例自动迭代，允许修改业务代码，最多 3 轮。
+```
+
+Codex 配置 `policy.allow_implicit_invocation: false`；Claude Code 使用 `/backend-integration-testing`，并配置了官方支持的 [disable-model-invocation](https://code.claude.com/docs/en/skills)。不支持这些控制的宿主只能放入手动命令入口，不加入自动发现目录。仅出现“测试”关键词不构成调用授权；生成的脚本不受手动 skill 调用限制。
+
+运行器自身回归检查（不需要 Docker）：
+
+```bash
+python -m unittest discover -s tests -p 'test_backend_integration_runner.py' -v
+```
+
 ### `writing-for-agents`
 
 用于编写面向 Agent 的说明、规则或上下文材料。
@@ -202,7 +233,7 @@ grilling
 writing-for-agents
 ```
 
-自定义 `architecture` 记录在 `.github/custom-skills.txt`，不会被上游同名内容覆盖。
+自定义 `architecture` 和 `backend-integration-testing` 记录在 `.github/custom-skills.txt`，不会被上游同名内容覆盖。
 
 ## 最终心智模型
 
